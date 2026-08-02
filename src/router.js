@@ -2,8 +2,8 @@
 
 const routes = {
   '/dashboard': () => import('./pages/dashboard.page.js'),
-  '/rooms': () => import('./pages/rooms.page.js'),
-  '/tenants': () => import('./pages/tenants.page.js'),
+  '/rooms': () => import('./pages/rooms-page.js'),
+  '/tenants': () => import('./pages/tenants-page.js'),
   '/contracts': () => import('./pages/contracts.page.js'),
   '/meters': () => import('./pages/meters.page.js'),
   '/services': () => import('./pages/services.page.js'),

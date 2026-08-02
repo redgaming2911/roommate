@@ -1,0 +1,81 @@
+.tenants-page {
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filters {
+    margin: 16px 0;
+    display: flex;
+    gap: 10px;
+}
+
+.tenant-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.tenant-table th,
+.tenant-table td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.badge-success {
+    background: #e6f7ee;
+    color: #1a7f37;
+}
+
+.badge-gray {
+    background: #eee;
+    color: #666;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+}
+
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
