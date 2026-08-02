@@ -1,0 +1,43 @@
+.meter-page {
+    padding: 16px;
+}
+
+.meter-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.meter-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.meter-table th,
+.meter-table td {
+    border: 1px solid #eee;
+    padding: 8px;
+    text-align: center;
+}
+
+.meter-input {
+    width: 80px;
+    padding: 4px;
+    text-align: center;
+}
+
+.meter-warning {
+    color: #e67e22;
+    font-size: 12px;
+}
+
+.meter-error {
+    color: red;
+    font-size: 12px;
+}
+
+.meter-success {
+    color: green;
+    font-size: 12px;
+}
