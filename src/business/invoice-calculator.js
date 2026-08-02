@@ -1,99 +1,57 @@
-/**
- * Helpers
- */
-function assertNumber(value, name) {
-  if (value == null || Number.isNaN(value)) {
-    throw new Error(`${name} không hợp lệ (NaN)`);
-  }
+// invoice-calculator.js
 
-  if (typeof value !== 'number') {
-    throw new Error(`${name} phải là number`);
+function ensureValidNumber(value, name) {
+  if (typeof value !== 'number' || isNaN(value)) {
+    throw new Error(`${name} phải là số hợp lệ`);
   }
-
   if (value < 0) {
     throw new Error(`${name} không được âm`);
   }
 }
 
-/**
- * Điện
- */
 export function calculateElectricAmount(usage, unitPrice) {
-  assertNumber(usage, 'Sản lượng điện');
-  assertNumber(unitPrice, 'Đơn giá điện');
-
+  ensureValidNumber(usage, 'Sản lượng điện');
+  ensureValidNumber(unitPrice, 'Đơn giá điện');
   return usage * unitPrice;
 }
 
-/**
- * Nước
- */
 export function calculateWaterAmount(usage, unitPrice) {
-  assertNumber(usage, 'Sản lượng nước');
-  assertNumber(unitPrice, 'Đơn giá nước');
-
+  ensureValidNumber(usage, 'Sản lượng nước');
+  ensureValidNumber(unitPrice, 'Đơn giá nước');
   return usage * unitPrice;
 }
 
-/**
- * Dịch vụ cố định
- */
 export function calculateFixedServiceAmount(unitPrice) {
-  assertNumber(unitPrice, 'Đơn giá dịch vụ');
-
+  ensureValidNumber(unitPrice, 'Đơn giá dịch vụ cố định');
   return unitPrice;
 }
 
-/**
- * Theo người
- */
 export function calculatePerPersonAmount(personCount, unitPrice) {
-  assertNumber(personCount, 'Số người');
-  assertNumber(unitPrice, 'Đơn giá');
-
+  ensureValidNumber(personCount, 'Số người');
+  ensureValidNumber(unitPrice, 'Đơn giá/người');
   return personCount * unitPrice;
 }
 
-/**
- * Theo xe
- */
 export function calculatePerVehicleAmount(vehicleCount, unitPrice) {
-  assertNumber(vehicleCount, 'Số xe');
-  assertNumber(unitPrice, 'Đơn giá');
-
+  ensureValidNumber(vehicleCount, 'Số xe');
+  ensureValidNumber(unitPrice, 'Đơn giá/xe');
   return vehicleCount * unitPrice;
 }
 
-/**
- * Tổng tạm tính
- */
-export function calculateSubtotal(items = []) {
+export function calculateSubtotal(items) {
   if (!Array.isArray(items)) {
-    throw new Error('Danh sách items không hợp lệ');
+    throw new Error('Danh sách mục không hợp lệ');
   }
 
-  const subtotal = items.reduce((sum, item) => {
-    const amount = Number(item.amount);
-
-    if (Number.isNaN(amount) || amount < 0) {
-      throw new Error('Item amount không hợp lệ');
-    }
-
-    return sum + amount;
+  return items.reduce((sum, item) => {
+    ensureValidNumber(item.amount, 'Thành tiền');
+    return sum + item.amount;
   }, 0);
-
-  return subtotal;
 }
 
-/**
- * Giảm giá
- */
-export function calculateDiscount(subtotal, discount = 0) {
-  assertNumber(subtotal, 'Tạm tính');
-
-  if (discount == null) discount = 0;
-
-  assertNumber(discount, 'Giảm giá');
+export function calculateDiscount(subtotal, discount) {
+  ensureValidNumber(subtotal, 'Tạm tính');
+  ensureValidNumber(discount, 'Giảm giá');
 
   if (discount > subtotal) {
     throw new Error('Giảm giá không được lớn hơn tạm tính');
@@ -102,13 +60,9 @@ export function calculateDiscount(subtotal, discount = 0) {
   return discount;
 }
 
-/**
- * Tổng hóa đơn
- */
 export function calculateInvoiceTotal(items, discount = 0) {
   const subtotal = calculateSubtotal(items);
   const validDiscount = calculateDiscount(subtotal, discount);
-
   const total = subtotal - validDiscount;
 
   if (total < 0) {
@@ -118,57 +72,35 @@ export function calculateInvoiceTotal(items, discount = 0) {
   return total;
 }
 
-/**
- * Công nợ còn lại
- */
-export function calculateRemainingDebt(total, paidAmount = 0) {
-  assertNumber(total, 'Tổng tiền');
-
-  if (paidAmount == null) paidAmount = 0;
-
-  assertNumber(paidAmount, 'Đã thanh toán');
+export function calculateRemainingDebt(total, paidAmount) {
+  ensureValidNumber(total, 'Tổng tiền');
+  ensureValidNumber(paidAmount, 'Số tiền đã trả');
 
   const remaining = total - paidAmount;
-
   return remaining < 0 ? 0 : remaining;
 }
 
-/**
- * Trạng thái hóa đơn
- * unpaid | partial | paid | overdue
- */
 export function determineInvoiceStatus(
   total,
   paidAmount = 0,
   dueDate,
-  currentDate = new Date().toISOString()
+  currentDate = new Date()
 ) {
-  assertNumber(total, 'Tổng tiền');
+  ensureValidNumber(total, 'Tổng tiền');
+  ensureValidNumber(paidAmount, 'Đã trả');
 
-  if (paidAmount == null) paidAmount = 0;
-  assertNumber(paidAmount, 'Đã thanh toán');
+  const remaining = calculateRemainingDebt(total, paidAmount);
 
-  const now = new Date(currentDate);
-  const due = dueDate ? new Date(dueDate) : null;
+  const isOverdue =
+    dueDate && new Date(currentDate).getTime() > new Date(dueDate).getTime();
 
-  if (paidAmount >= total) {
-    return 'paid';
-  }
-
-  if (paidAmount > 0 && paidAmount < total) {
-    if (due && now > due) {
-      return 'overdue';
-    }
-    return 'partial';
-  }
-
-  // chưa trả
   if (paidAmount === 0) {
-    if (due && now > due) {
-      return 'overdue';
-    }
-    return 'unpaid';
+    return isOverdue ? 'overdue' : 'unpaid';
   }
 
-  return 'unpaid';
+  if (remaining > 0) {
+    return isOverdue ? 'overdue' : 'partial';
+  }
+
+  return 'paid';
 }

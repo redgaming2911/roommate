@@ -1,54 +1,67 @@
-function assertNumber(value, name) {
-  if (value == null || Number.isNaN(value)) {
-    throw new Error(`${name} không hợp lệ (NaN)`);
-  }
+// invoice-validator.js
 
-  if (typeof value !== 'number') {
-    throw new Error(`${name} phải là number`);
-  }
-
-  if (value < 0) {
-    throw new Error(`${name} không được âm`);
-  }
+function isValidNumber(value) {
+  return typeof value === 'number' && !isNaN(value) && value >= 0;
 }
 
-/**
- * Validate hóa đơn
- * @typedef {Object} Invoice
- * @property {Array} items
- * @property {number} discount
- * @property {number} total
- * @property {number} paidAmount
- */
 export function validateInvoice(invoice) {
-  if (!invoice) {
-    throw new Error('Hóa đơn không tồn tại');
+  if (!invoice || typeof invoice !== 'object') {
+    throw new Error('Hóa đơn không hợp lệ');
   }
 
-  const { items, discount = 0, total, paidAmount = 0 } = invoice;
+  const {
+    roomId,
+    month,
+    items,
+    total,
+    paidAmount = 0,
+    dueDate
+  } = invoice;
+
+  if (!roomId) {
+    throw new Error('Thiếu roomId');
+  }
+
+  if (!month) {
+    throw new Error('Thiếu tháng hóa đơn');
+  }
 
   if (!Array.isArray(items) || items.length === 0) {
-    throw new Error('Hóa đơn phải có ít nhất 1 item');
+    throw new Error('Hóa đơn phải có ít nhất 1 mục');
   }
 
   items.forEach((item, index) => {
-    if (!item) {
-      throw new Error(`Item #${index} không tồn tại`);
+    if (!item.name) {
+      throw new Error(`Item[${index}] thiếu tên`);
     }
 
-    assertNumber(item.amount, `Số tiền item #${index}`);
+    if (!isValidNumber(item.unitPrice)) {
+      throw new Error(`Item[${index}] đơn giá không hợp lệ`);
+    }
+
+    if (!isValidNumber(item.quantity)) {
+      throw new Error(`Item[${index}] số lượng không hợp lệ`);
+    }
+
+    if (!isValidNumber(item.amount)) {
+      throw new Error(`Item[${index}] thành tiền không hợp lệ`);
+    }
   });
 
-  assertNumber(discount, 'Giảm giá');
-  assertNumber(total, 'Tổng tiền');
-  assertNumber(paidAmount, 'Đã thanh toán');
+  if (!isValidNumber(total)) {
+    throw new Error('Tổng tiền không hợp lệ');
+  }
 
-  if (discount > total) {
-    throw new Error('Giảm giá không được lớn hơn tổng tiền');
+  if (!isValidNumber(paidAmount)) {
+    throw new Error('Số tiền đã trả không hợp lệ');
   }
 
   if (paidAmount > total) {
-    throw new Error('Số tiền thanh toán không được lớn hơn tổng tiền');
+    throw new Error('Số tiền đã trả không được vượt quá tổng tiền');
+  }
+
+  if (dueDate && isNaN(new Date(dueDate).getTime())) {
+    throw new Error('Ngày hạn thanh toán không hợp lệ');
   }
 
   return true;
