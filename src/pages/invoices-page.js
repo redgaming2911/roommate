@@ -573,7 +573,7 @@ function renderInvoiceRow(invoice) {
 
       <td>${escapeHtml(formatMonth(invoice.month))}</td>
 
-      <td class="invoice-text-end">
+      <td class="invoice-text-end" data-testid="invoice-total">
         ${formatCurrency(invoice.total)}
       </td>
 
@@ -582,7 +582,7 @@ function renderInvoiceRow(invoice) {
           Number(invoice.paidAmount) > 0
             ? 'invoice-amount-paid'
             : ''
-        }"
+        }" data-testid="invoice-paid-amount"
       >
         ${formatCurrency(invoice.paidAmount)}
       </td>
@@ -592,7 +592,7 @@ function renderInvoiceRow(invoice) {
           remainingDebt > 0
             ? 'invoice-amount-debt'
             : ''
-        }"
+        }" data-testid="invoice-remaining-amount"
       >
         ${formatCurrency(remainingDebt)}
       </td>

@@ -15,9 +15,9 @@ export function renderTenantForm({ tenant = null, onSubmit }) {
     <form class="tenant-modal-content">
       <div class="tenant-form-header"><h2>${tenant ? 'Sửa người thuê' : 'Thêm người thuê'}</h2><button type="button" class="btn-close" data-action="close"></button></div>
       <div class="tenant-form-grid">
-        <label>Họ và tên *<input class="form-control" name="name" value="${escapeHtml(tenant?.name)}" required></label>
-        <label>Số điện thoại *<input class="form-control" name="phone" value="${escapeHtml(tenant?.phone)}" required></label>
-        <label>CCCD<input class="form-control" name="cccd" value="${escapeHtml(tenant?.cccd)}"></label>
+        <label>Họ và tên *<input class="form-control" data-testid="tenant-input-name" name="name" value="${escapeHtml(tenant?.name)}" required></label>
+        <label>Số điện thoại *<input class="form-control" data-testid="tenant-input-phone" name="phone" value="${escapeHtml(tenant?.phone)}" required></label>
+        <label>CCCD<input class="form-control" data-testid="tenant-input-cccd" name="cccd" value="${escapeHtml(tenant?.cccd)}"></label>
         <label>Ngày sinh<input class="form-control" type="date" name="birthDate" value="${escapeHtml(tenant?.birthDate)}"></label>
         <label>Giới tính<select class="form-select" name="gender"><option value="">Không xác định</option><option value="male" ${tenant?.gender === 'male' ? 'selected' : ''}>Nam</option><option value="female" ${tenant?.gender === 'female' ? 'selected' : ''}>Nữ</option></select></label>
         <label>Nghề nghiệp<input class="form-control" name="occupation" value="${escapeHtml(tenant?.occupation)}"></label>

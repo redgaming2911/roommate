@@ -58,11 +58,11 @@ function renderTable() {
         const contract = ContractService.getActiveContractByRoom(room.id);
         const tenantIds = contract?.tenantIds?.length ? contract.tenantIds : contract?.tenantId ? [contract.tenantId] : [];
         const representative = tenants.get(contract?.tenantId);
-        return `<tr>
-          <td><strong>${escapeHtml(room.code)}</strong></td><td>${escapeHtml(room.name)}</td><td>${escapeHtml(room.type)}</td>
-          <td>${formatCurrency(room.price)}</td><td><span class="badge room-status-${room.status}">${escapeHtml(ROOM_STATUS_LABEL[room.status] || room.status)}</span></td>
+        return `<tr data-testid="room-row" data-room-code="${escapeHtml(room.code)}">
+          <td data-testid="room-code"><strong>${escapeHtml(room.code)}</strong></td><td data-testid="room-name">${escapeHtml(room.name)}</td><td>${escapeHtml(room.type)}</td>
+          <td data-testid="room-price">${formatCurrency(room.price)}</td><td data-testid="room-status"><span class="badge room-status-${room.status}">${escapeHtml(ROOM_STATUS_LABEL[room.status] || room.status)}</span></td>
           <td>${tenantIds.length}/${room.maxOccupants}</td><td>${escapeHtml(representative?.name || '—')}</td><td>${formatCurrency(debts.get(room.id) || 0)}</td>
-          <td><button class="btn btn-sm btn-outline-primary" data-id="${room.id}" data-action="edit">Sửa</button> <button class="btn btn-sm btn-outline-danger" data-id="${room.id}" data-action="delete">Xóa</button></td>
+          <td><button class="btn btn-sm btn-outline-primary" data-testid="btn-edit-room" data-id="${room.id}" data-action="edit">Sửa</button> <button class="btn btn-sm btn-outline-danger" data-testid="btn-delete-room" data-id="${room.id}" data-action="delete">Xóa</button></td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`;

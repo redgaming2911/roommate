@@ -84,6 +84,15 @@ body {
     min-width: 0;
 }
 
+/* Keep the shared confirmation dialog above page-level custom modals. */
+#confirmModal {
+    z-index: 11050;
+}
+
+.modal-backdrop.show {
+    z-index: 11040;
+}
+
 .main-content {
     min-width: 0;
     padding: 20px;

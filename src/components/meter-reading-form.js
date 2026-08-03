@@ -11,6 +11,8 @@ export function createMeterRow({
   onDelete
 }) {
   const tr = document.createElement('tr');
+  tr.dataset.testid = 'meter-row';
+  tr.dataset.roomCode = room.code;
 
   const oldElectric = previousReading?.electricIndex || 0;
   const oldWater = previousReading?.waterIndex || 0;

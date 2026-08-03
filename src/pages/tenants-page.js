@@ -27,8 +27,8 @@ function renderTable() {
   empty.hidden = tenants.length > 0;
   body.innerHTML = tenants.map((tenant) => {
     const room = TenantService.getCurrentRoomOfTenant(tenant.id);
-    return `<tr>
-      <td><strong>${escapeHtml(tenant.name)}</strong></td><td>${escapeHtml(tenant.phone)}</td><td>${escapeHtml(tenant.cccd || '—')}</td>
+    return `<tr data-testid="tenant-row">
+      <td data-testid="tenant-name"><strong>${escapeHtml(tenant.name)}</strong></td><td>${escapeHtml(tenant.phone)}</td><td>${escapeHtml(tenant.cccd || '—')}</td>
       <td>${escapeHtml(room ? `${room.code} - ${room.name}` : 'Không có phòng')}</td>
       <td><span class="badge tenant-status-${tenant.status}">${escapeHtml(TENANT_STATUS_LABEL[tenant.status] || tenant.status)}</span></td>
       <td><button class="btn btn-sm btn-outline-secondary" data-action="history" data-id="${tenant.id}">Lịch sử</button> <button class="btn btn-sm btn-outline-primary" data-action="edit" data-id="${tenant.id}">Sửa</button> <button class="btn btn-sm btn-outline-warning" data-action="archive" data-id="${tenant.id}">Lưu trữ</button> <button class="btn btn-sm btn-outline-danger" data-action="delete" data-id="${tenant.id}">Xóa</button></td>

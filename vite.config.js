@@ -5,8 +5,10 @@ export default defineConfig({
   base: './', // phù hợp GitHub Pages
 
   server: {
+    host: '127.0.0.1',
     port: 5173,
-    open: true
+    strictPort: true,
+    open: false
   },
 
   build: {
