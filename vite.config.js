@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 
-export default defineConfig({
-  base: './', // phù hợp GitHub Pages
+export default defineConfig(({ command, isPreview }) => ({
+  base: command === 'build' || isPreview
+    ? '/roommate/'
+    : '/',
 
   server: {
     host: '127.0.0.1',
@@ -21,4 +23,4 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   }
-});
+}));
