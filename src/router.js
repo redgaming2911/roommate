@@ -11,7 +11,7 @@ const routes = {
   '/payments': () => import('./pages/payments-page.js'),
   '/debts': () => import('./pages/debts.page.js'),
   '/reports': () => import('./pages/reports-page.js'),
-  '/settings': () => import('./pages/settings.page.js')
+  '/settings': () => import('./pages/settings-page.js')
 };
 
 const NOT_FOUND_ROUTE = '/404';

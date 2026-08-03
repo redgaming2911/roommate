@@ -21,7 +21,7 @@ export function initConfirmDialog() {
               Hủy
             </button>
             <button class="btn btn-danger" id="confirm-ok" data-testid="confirm-ok">
-              Xóa
+              Xác nhận
             </button>
           </div>
         </div>
@@ -31,15 +31,23 @@ export function initConfirmDialog() {
 
   const modalEl = document.getElementById('confirmModal');
   const modal = new bootstrap.Modal(modalEl);
+  const confirmButton = document.getElementById('confirm-ok');
 
-  document.getElementById('confirm-ok').addEventListener('click', () => {
+  confirmButton.addEventListener('click', () => {
     if (confirmCallback) confirmCallback();
+    confirmCallback = null;
     modal.hide();
   });
 
-  window.showConfirm = (message, callback) => {
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    confirmCallback = null;
+  });
+
+  window.showConfirm = (message, callback, options = {}) => {
     confirmCallback = callback;
     document.getElementById('confirm-message').innerText = message;
+    confirmButton.textContent = options.confirmLabel ?? 'Xác nhận';
+    confirmButton.className = `btn btn-${options.variant ?? 'danger'}`;
     modal.show();
   };
 }

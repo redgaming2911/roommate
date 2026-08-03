@@ -3,6 +3,7 @@ import {
   assertValidImportData,
   validateImportData
 } from '../business/import-validator.js';
+import { STORAGE_KEYS } from '../constants/storage-keys.js';
 import { resetToSeedData } from './seed-service.js';
 import * as StorageService from './storage-service.js';
 
@@ -193,11 +194,13 @@ export const BackupService = {
   },
 
   createBackupBeforeImport() {
-    return this.exportData();
+    return this.downloadBackup();
   },
 
   resetAllData() {
-    StorageService.clearAll();
+    Object.values(STORAGE_KEYS).forEach((key) => {
+      StorageService.clearKey(key);
+    });
     return true;
   },
 
