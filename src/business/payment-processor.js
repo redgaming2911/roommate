@@ -181,11 +181,11 @@ export function canDeletePayment(payment, invoice) {
   }
 
   const invoiceStatus =
-    invoice.status === 'cancelled'
-      ? 'canceled'
+    invoice.status === 'canceled'
+      ? 'cancelled'
       : invoice.status;
 
-  if (invoiceStatus === 'canceled') {
+  if (invoiceStatus === 'cancelled') {
     throw new Error(
       'Không thể xóa giao dịch của hóa đơn đã hủy'
     );

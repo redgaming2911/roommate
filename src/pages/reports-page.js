@@ -326,11 +326,76 @@ function createPaymentMethodChart(methods) {
   }));
 }
 
+function createRoomStatusChart(statistics) {
+  const canvas = document.querySelector(
+    '[data-testid="report-room-status-chart"]'
+  );
+
+  if (!canvas || statistics.totalRooms === 0) return;
+
+  chartInstances.set('roomStatus', new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['Đang thuê', 'Phòng trống', 'Đang sửa chữa'],
+      datasets: [{
+        data: [
+          statistics.rentedRooms,
+          statistics.emptyRooms,
+          statistics.repairingRooms
+        ],
+        backgroundColor: ['#2563eb', '#94a3b8', '#f59e0b'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { usePointStyle: true, boxWidth: 8 }
+        }
+      }
+    }
+  }));
+}
+
 function createCharts(report, roomRows) {
   createFinancialChart(report);
   createRoomChart(roomRows);
   createInvoiceStatusChart(report.invoiceStatusDistribution);
   createPaymentMethodChart(report.paymentsByMethod);
+  createRoomStatusChart(report.roomStatistics);
+}
+
+function renderExpiringContracts(contracts) {
+  if (contracts.length === 0) {
+    return renderEmpty(
+      'Không có hợp đồng sắp hết hạn trong 30 ngày.',
+      'report-expiring-contracts-empty'
+    );
+  }
+
+  return `
+    <div class="report-table-wrap">
+      <table class="report-table" data-testid="report-expiring-contracts-table">
+        <thead>
+          <tr><th>Hợp đồng</th><th>Phòng</th><th>Ngày hết hạn</th><th>Còn lại</th></tr>
+        </thead>
+        <tbody>
+          ${contracts.map((contract) => `
+            <tr>
+              <td>${escapeHtml(contract.code ?? contract.id)}</td>
+              <td>${escapeHtml(contract.roomId)}</td>
+              <td>${escapeHtml(contract.endDate)}</td>
+              <td>${formatNumber(contract.daysRemaining)} ngày</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 function renderChartPanel({ title, testId, hasData }) {
@@ -417,6 +482,11 @@ function renderPage(container) {
           testId: 'report-payment-method-chart',
           hasData: report.paymentsByMethod.length > 0
         })}
+        ${renderChartPanel({
+          title: 'Trạng thái phòng',
+          testId: 'report-room-status-chart',
+          hasData: report.roomStatistics.totalRooms > 0
+        })}
       </div>
 
       <article class="report-panel report-data-panel">
@@ -431,6 +501,13 @@ function renderPage(container) {
           <h2>Công nợ và điện nước theo phòng</h2>
         </div>
         ${renderRoomTable(roomRows)}
+      </article>
+
+      <article class="report-panel report-data-panel">
+        <div class="report-panel__header">
+          <h2>Hợp đồng sắp hết hạn</h2>
+        </div>
+        ${renderExpiringContracts(report.expiringContracts)}
       </article>
 
       <div class="report-breakdown-grid">

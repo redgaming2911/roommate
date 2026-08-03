@@ -1,66 +1,32 @@
 import { ServiceConfigService } from '../services/service-config-service.js';
 
+function escapeHtml(value) {
+  return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+}
+
 export function ServiceConfigForm({ container, onSuccess, data = null }) {
-  container.innerHTML = `
-    <div class="modal">
-      <div class="modal-content">
-        <h2>${data ? 'Sửa dịch vụ' : 'Thêm dịch vụ'}</h2>
-
-        <form data-testid="service-form">
-          <input placeholder="Mã dịch vụ" name="code" value="${data?.code || ''}" required />
-          <input placeholder="Tên dịch vụ" name="name" value="${data?.name || ''}" required />
-          <input placeholder="Đơn vị" name="unit" value="${data?.unit || ''}" />
-
-          <select name="calculationType">
-            <option value="usage">Theo lượng sử dụng</option>
-            <option value="fixed">Cố định</option>
-            <option value="perPerson">Theo người</option>
-            <option value="perVehicle">Theo xe</option>
-            <option value="manual">Thủ công</option>
-          </select>
-
-          <input type="number" name="unitPrice" placeholder="Đơn giá" value="${data?.unitPrice || ''}" />
-
-          <input type="date" name="startDate" value="${data?.startDate || ''}" />
-          <input type="date" name="endDate" value="${data?.endDate || ''}" />
-
-          <textarea name="note" placeholder="Ghi chú">${data?.note || ''}</textarea>
-
-          <button type="submit">Lưu</button>
-        </form>
-      </div>
-    </div>
-  `;
-
-  const form = container.querySelector('form');
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(form);
-
-    const payload = {
-      code: formData.get('code'),
-      name: formData.get('name'),
-      unit: formData.get('unit'),
-      unitPrice: Number(formData.get('unitPrice')),
-      calculationType: formData.get('calculationType'),
-      startDate: formData.get('startDate'),
-      endDate: formData.get('endDate') || null,
-      note: formData.get('note'),
-      status: 'active'
-    };
-
-    try {
-      if (data) {
-        ServiceConfigService.update(data.id, payload);
-      } else {
-        ServiceConfigService.create(payload);
-      }
-
-      onSuccess();
-    } catch (err) {
-      alert(err.message);
-    }
+  container.innerHTML = `<div class="service-modal" data-testid="service-form-modal"><div class="service-modal-content">
+    <div class="service-form-header"><h2>${data ? 'Sửa dịch vụ' : 'Thêm dịch vụ'}</h2><button type="button" class="btn-close" data-action="close"></button></div>
+    <form data-testid="service-form" class="service-form-grid">
+      <label>Mã dịch vụ *<input class="form-control" name="code" value="${escapeHtml(data?.code)}" required></label>
+      <label>Tên dịch vụ *<input class="form-control" name="name" value="${escapeHtml(data?.name)}" required></label>
+      <label>Đơn vị tính<input class="form-control" name="unit" value="${escapeHtml(data?.unit)}"></label>
+      <label>Cách tính<select class="form-select" name="calculationType">${[['usage','Theo lượng sử dụng'],['fixed','Cố định theo phòng'],['perPerson','Theo số người'],['perVehicle','Theo số xe'],['manual','Nhập thủ công']].map(([value,label]) => `<option value="${value}" ${data?.calculationType === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
+      <label>Đơn giá *<input class="form-control" type="number" min="0" name="unitPrice" value="${data?.unitPrice ?? ''}" required></label>
+      <label>Trạng thái<select class="form-select" name="status"><option value="active" ${data?.status !== 'inactive' ? 'selected' : ''}>Đang áp dụng</option><option value="inactive" ${data?.status === 'inactive' ? 'selected' : ''}>Ngưng áp dụng</option></select></label>
+      <label>Ngày bắt đầu *<input class="form-control" type="date" name="startDate" value="${escapeHtml(data?.startDate)}" required></label>
+      <label>Ngày kết thúc<input class="form-control" type="date" name="endDate" value="${escapeHtml(data?.endDate)}"></label>
+      <label class="service-form-wide">Ghi chú<textarea class="form-control" name="note">${escapeHtml(data?.note)}</textarea></label>
+      <p class="service-form-error service-form-wide" data-testid="service-form-error" role="alert"></p>
+      <div class="service-form-actions service-form-wide"><button type="button" class="btn btn-secondary" data-action="close">Hủy</button><button type="submit" class="btn btn-primary">Lưu</button></div>
+    </form>
+  </div></div>`;
+  const close = () => container.remove();
+  container.querySelectorAll('[data-action="close"]').forEach((button) => button.addEventListener('click', close));
+  container.querySelector('form').addEventListener('submit', (event) => {
+    event.preventDefault(); const formData = new FormData(event.currentTarget);
+    const payload = { code: formData.get('code'), name: formData.get('name'), unit: formData.get('unit'), unitPrice: Number(formData.get('unitPrice')), calculationType: formData.get('calculationType'), status: formData.get('status'), startDate: formData.get('startDate'), endDate: formData.get('endDate') || null, note: formData.get('note') };
+    try { data ? ServiceConfigService.update(data.id, payload) : ServiceConfigService.create(payload); onSuccess(); }
+    catch (error) { container.querySelector('[data-testid="service-form-error"]').textContent = error.message; }
   });
 }

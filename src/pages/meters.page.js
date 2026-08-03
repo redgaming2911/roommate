@@ -1,3 +1,1 @@
-export function render(container) {
-  container.innerHTML = `<h1 class="page-title">Dashboard</h1>`;
-}
+export { render } from './meter-readings-page.js';

@@ -26,7 +26,8 @@ export function normalizeServiceConfig(data) {
     code: data.code?.trim().toUpperCase(),
     name: data.name?.trim(),
     unit: data.unit?.trim(),
-    note: data.note?.trim() || ''
+    note: data.note?.trim() || '',
+    status: data.status || 'active'
   };
 }
 
@@ -42,6 +43,10 @@ export function validateServiceConfig(data, existing = []) {
 
   if (!VALID_CALCULATION_TYPES.includes(data.calculationType)) {
     errors.push('Cách tính không hợp lệ');
+  }
+
+  if (!['active', 'inactive'].includes(data.status)) {
+    errors.push('Trạng thái dịch vụ không hợp lệ');
   }
 
   if (!data.startDate) {

@@ -20,12 +20,17 @@ export function validateContract(contract, context = {}) {
   }
 
   const {
+    code,
     startDate,
     endDate,
     rentAmount,
     depositAmount,
     roomId,
   } = contract;
+
+  if (!String(code ?? '').trim()) {
+    throw new Error('Mã hợp đồng là bắt buộc');
+  }
 
   // Validate ngày
   if (!startDate || !endDate) {
@@ -44,11 +49,11 @@ export function validateContract(contract, context = {}) {
   }
 
   // Validate tiền
-  if (rentAmount < 0) {
+  if (!Number.isFinite(Number(rentAmount)) || Number(rentAmount) < 0) {
     throw new Error("Giá thuê không hợp lệ");
   }
 
-  if (depositAmount < 0) {
+  if (!Number.isFinite(Number(depositAmount)) || Number(depositAmount) < 0) {
     throw new Error("Tiền cọc không hợp lệ");
   }
 
@@ -72,7 +77,10 @@ export function validateContract(contract, context = {}) {
 
   return {
     ...contract,
+    code: String(code).trim().toUpperCase(),
     startDate,
     endDate,
+    rentAmount: Number(rentAmount),
+    depositAmount: Number(depositAmount),
   };
 }

@@ -3,6 +3,8 @@
  * Chứa các hàm kiểm tra dữ liệu phòng
  */
 
+import { ROOM_STATUS } from '../constants/statuses.js';
+
 /**
  * Chuẩn hóa mã phòng
  * @param {string} code
@@ -54,7 +56,7 @@ export function validateRoom(data) {
  * @param {string} status
  */
 export function validateRoomStatus(status) {
-  const allowed = ['empty', 'rented', 'repairing'];
+  const allowed = Object.values(ROOM_STATUS);
   if (!allowed.includes(status)) {
     throw new Error('Trạng thái phòng không hợp lệ');
   }

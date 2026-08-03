@@ -204,6 +204,15 @@ export function render(container) {
       testId: 'stat-rented-rooms'
     },
     {
+      title: 'Phòng sửa chữa',
+      value: formatNumber(roomStatistics.repairingRooms),
+      unit: 'phòng',
+      description: 'Đang bảo trì hoặc sửa chữa',
+      icon: '⚒',
+      tone: 'warning',
+      testId: 'stat-repairing-rooms'
+    },
+    {
       title: 'Tỷ lệ lấp đầy',
       value: formatPercentage(roomStatistics.occupancyRate),
       description: 'Trên tổng số phòng',
@@ -244,6 +253,15 @@ export function render(container) {
       icon: '!',
       tone: 'danger',
       testId: 'stat-overdue-invoices'
+    },
+    {
+      title: 'Hóa đơn chưa thanh toán',
+      value: formatNumber(report.unpaidInvoiceCount),
+      unit: 'hóa đơn',
+      description: 'Còn số tiền phải thu',
+      icon: '▤',
+      tone: 'warning',
+      testId: 'stat-unpaid-invoices'
     },
     {
       title: 'Điện tiêu thụ trong tháng',
@@ -332,7 +350,11 @@ export function render(container) {
           </div>
           ${renderAlertList({
             overdueInvoiceCount: report.overdueInvoiceCount,
-            expiringContracts: report.expiringContracts
+            expiringContracts: report.expiringContracts,
+            invoicesDueSoon: report.invoicesDueSoon,
+            roomsWithoutReading: report.roomsWithoutReading,
+            rentedRoomsWithoutContract: report.rentedRoomsWithoutContract,
+            abnormalUtilityUsage: report.abnormalUtilityUsage
           })}
         </aside>
       </div>

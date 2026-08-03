@@ -243,6 +243,7 @@ export const ReportService = {
       ReportCalculator.calculateWaterConsumptionByRoom(
         data.meterReadings
       );
+    const currentMonth = new Date(currentDate).toISOString().slice(0, 7);
 
     return {
       roomStatistics: getRoomStatistics(data.rooms),
@@ -269,6 +270,32 @@ export const ReportService = {
           data.invoices,
           data.invoicePayments,
           currentDate
+        ),
+      unpaidInvoiceCount:
+        ReportCalculator.calculateUnpaidInvoiceCount(
+          data.invoices,
+          data.invoicePayments
+        ),
+      invoicesDueSoon:
+        ReportCalculator.calculateInvoicesDueSoon(
+          data.invoices,
+          data.invoicePayments,
+          currentDate
+        ),
+      roomsWithoutReading:
+        ReportCalculator.calculateRoomsWithoutReading(
+          data.rooms,
+          data.meterReadings,
+          currentMonth
+        ),
+      rentedRoomsWithoutContract:
+        ReportCalculator.calculateRentedRoomsWithoutContract(
+          data.rooms,
+          data.contracts
+        ),
+      abnormalUtilityUsage:
+        ReportCalculator.calculateAbnormalUtilityUsage(
+          data.meterReadings
         ),
       utilityByMonth,
       totalElectricUsage: utilityByMonth.reduce(
@@ -339,6 +366,10 @@ export const ReportService = {
 
   getOverdueInvoiceCount(options = {}) {
     return this.getReport(options).overdueInvoiceCount;
+  },
+
+  getUnpaidInvoiceCount(options = {}) {
+    return this.getReport(options).unpaidInvoiceCount;
   },
 
   getUtilityConsumptionByMonth(options = {}) {

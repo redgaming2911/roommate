@@ -4,9 +4,11 @@ import {
   normalizeRoomCode,
   validateRoomStatus
 } from '../business/room-validator.js';
+import { ROOM_STATUS, CONTRACT_STATUS } from '../constants/statuses.js';
+import { STORAGE_KEYS } from '../constants/storage-keys.js';
 
-const KEY = 'rooms';
-const CONTRACT_KEY = 'contracts';
+const KEY = STORAGE_KEYS.ROOMS;
+const CONTRACT_KEY = STORAGE_KEYS.CONTRACTS;
 
 /**
  * Lấy tất cả phòng
@@ -34,15 +36,21 @@ export function getRoomById(id) {
  */
 function hasActiveContract(roomId) {
   const contracts = StorageService.getAll(CONTRACT_KEY);
+  const now = new Date();
 
-  const now = new Date().toISOString();
+  return contracts.some((contract) => {
+    if (contract.roomId !== roomId) return false;
+    if (![CONTRACT_STATUS.ACTIVE, CONTRACT_STATUS.SOON_EXPIRE].includes(contract.status)) {
+      return false;
+    }
 
-  return contracts.some(c =>
-    c.roomId === roomId &&
-    c.status === 'active' &&
-    c.startDate <= now &&
-    c.endDate >= now
-  );
+    const start = new Date(contract.startDate);
+    const end = contract.endDate ? new Date(contract.endDate) : null;
+
+    return !Number.isNaN(start.getTime()) &&
+      start <= now &&
+      (!end || end >= now);
+  });
 }
 
 /**
@@ -63,7 +71,7 @@ export function createRoom(data) {
   const room = {
     ...data,
     code: normalizedCode,
-    status: data.status || 'empty'
+    status: data.status || ROOM_STATUS.EMPTY
   };
 
   validateRoomStatus(room.status);
@@ -98,7 +106,7 @@ export function updateRoom(id, data) {
   if (data.status) {
     validateRoomStatus(data.status);
 
-    if (data.status === 'empty' && hasActiveContract(id)) {
+    if (data.status === ROOM_STATUS.EMPTY && hasActiveContract(id)) {
       throw new Error('Không thể chuyển phòng thành trống khi có hợp đồng hiệu lực');
     }
   }
@@ -133,8 +141,8 @@ export function searchRooms(keyword) {
   const kw = keyword.toLowerCase();
 
   return rooms.filter(r =>
-    r.code.toLowerCase().includes(kw) ||
-    r.name.toLowerCase().includes(kw)
+    String(r.code ?? '').toLowerCase().includes(kw) ||
+    String(r.name ?? '').toLowerCase().includes(kw)
   );
 }
 
@@ -148,6 +156,10 @@ export function filterRooms(filters = {}) {
 
   if (filters.status) {
     rooms = rooms.filter(r => r.status === filters.status);
+  }
+
+  if (filters.type) {
+    rooms = rooms.filter(r => r.type === filters.type);
   }
 
   if (filters.minPrice != null) {
@@ -166,7 +178,7 @@ export function filterRooms(filters = {}) {
  * @returns {Array}
  */
 export function getAvailableRooms() {
-  return getRooms().filter(r => r.status === 'empty');
+  return getRooms().filter(r => r.status === ROOM_STATUS.EMPTY);
 }
 
 /**
@@ -177,8 +189,9 @@ export function getAvailableRooms() {
 export function getRoomOccupancy(roomId) {
   const room = getRoomById(roomId);
 
-  if (room.status === 'empty') return 0;
-  if (room.status === 'repairing') return 0;
+  if (room.status === ROOM_STATUS.EMPTY) return 0;
+  if (room.status === ROOM_STATUS.REPAIRING) return 0;
+  if (room.status === ROOM_STATUS.INACTIVE) return 0;
 
   return 1;
 }

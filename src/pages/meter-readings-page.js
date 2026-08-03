@@ -1,7 +1,8 @@
 import { MeterReadingService } from '../services/meter-reading-service.js';
 import * as RoomService from '../services/room-service.js';
 import { createMeterRow } from '../components/meter-reading-form.js';
-import '../styles/meter-readings.css';
+import { ROOM_STATUS } from '../constants/statuses.js';
+import '../styles/meter-reading.css';
 
 function renderMeterReadingsPage(container) {
   let selectedMonth = getCurrentMonth();
@@ -23,7 +24,7 @@ function renderMeterReadingsPage(container) {
           </div>
         </div>
 
-        <table class="meter-table" data-testid="meter-table">
+        <div class="meter-table-wrap"><table class="meter-table" data-testid="meter-table">
           <thead>
             <tr>
               <th>Phòng</th>
@@ -35,7 +36,8 @@ function renderMeterReadingsPage(container) {
             </tr>
           </thead>
           <tbody></tbody>
-        </table>
+        </table></div>
+        <div class="meter-empty" data-testid="meter-empty" hidden>Không có phòng đang thuê để ghi chỉ số.</div>
       </div>
     `;
 
@@ -59,7 +61,10 @@ function renderMeterReadingsPage(container) {
     tbody.innerHTML = '';
 
     const rooms = RoomService.getRooms()
-      .filter(r => r.status === 'occupied');
+      .filter(r => r.status === ROOM_STATUS.RENTED);
+
+    container.querySelector('[data-testid="meter-empty"]').hidden = rooms.length > 0;
+    container.querySelector('[data-testid="meter-table"]').hidden = rooms.length === 0;
 
     rooms.forEach(room => {
       const previous = MeterReadingService.getPreviousReading(room.id, selectedMonth);
@@ -102,7 +107,7 @@ function renderMeterReadingsPage(container) {
 
   function generateAll() {
     const rooms = RoomService.getRooms()
-      .filter(r => r.status === 'occupied');
+      .filter(r => r.status === ROOM_STATUS.RENTED);
 
     rooms.forEach(room => {
       const exists = MeterReadingService.getReadingByRoomAndMonth(room.id, selectedMonth);

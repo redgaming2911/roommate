@@ -3,6 +3,7 @@
 /**
  * Kiểm tra 2 khoảng thời gian có bị chồng lấp không
  */
+import { CONTRACT_STATUS } from '../constants/statuses.js';
 export function isDateRangeOverlap(startA, endA, startB, endB) {
   const aStart = new Date(startA).getTime();
   const aEnd = new Date(endA).getTime();
@@ -18,6 +19,9 @@ export function isDateRangeOverlap(startA, endA, startB, endB) {
 export function hasOverlappingContract(newContract, existingContracts = []) {
   return existingContracts.some((c) => {
     if (c.roomId !== newContract.roomId) return false;
+    if ([CONTRACT_STATUS.ENDED, CONTRACT_STATUS.CANCELLED].includes(c.status)) {
+      return false;
+    }
 
     return isDateRangeOverlap(
       newContract.startDate,
@@ -36,16 +40,20 @@ export function determineContractStatus(contract, currentDate = new Date()) {
   const start = new Date(contract.startDate).getTime();
   const end = new Date(contract.endDate).getTime();
 
-  if (now < start) return "upcoming";
-  if (now >= start && now <= end) return "active";
-  return "expired";
+  if (now < start) return CONTRACT_STATUS.PENDING;
+  if (now >= start && now <= end) return CONTRACT_STATUS.ACTIVE;
+  return CONTRACT_STATUS.EXPIRED;
 }
 
 /**
  * Hợp đồng đang hiệu lực
  */
 export function isContractActive(contract, currentDate = new Date()) {
-  return determineContractStatus(contract, currentDate) === "active";
+  if ([CONTRACT_STATUS.ENDED, CONTRACT_STATUS.CANCELLED, CONTRACT_STATUS.DRAFT].includes(contract.status)) {
+    return false;
+  }
+
+  return determineContractStatus(contract, currentDate) === CONTRACT_STATUS.ACTIVE;
 }
 
 /**
@@ -72,7 +80,7 @@ export function isContractExpiringSoon(
 export function validateOccupancyLimit(room, tenantIds = []) {
   if (!room) throw new Error("Phòng không tồn tại");
 
-  const max = room.maxOccupancy || 0;
+  const max = Number(room.maxOccupants ?? room.maxOccupancy ?? 0);
 
   if (tenantIds.length > max) {
     throw new Error("Số người vượt quá sức chứa phòng");

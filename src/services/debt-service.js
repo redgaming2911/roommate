@@ -8,7 +8,7 @@ import * as PaymentService from './payment-service.js';
  * @returns {string}
  */
 function normalizeInvoiceStatus(status) {
-  return status === 'cancelled' ? 'canceled' : status;
+  return status === 'canceled' ? 'cancelled' : status;
 }
 
 /**
@@ -147,7 +147,7 @@ export function getOutstandingInvoices() {
 
       if (
         status === 'draft' ||
-        status === 'canceled'
+        status === 'cancelled'
       ) {
         return false;
       }

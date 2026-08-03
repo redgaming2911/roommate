@@ -11,7 +11,18 @@ function getContractLabel(contract) {
   return contract.code ?? contract.id ?? 'Hợp đồng';
 }
 
-function createAlerts({ overdueInvoiceCount, expiringContracts }) {
+function getRoomLabel(room) {
+  return room.code ?? room.name ?? room.id ?? 'Phòng';
+}
+
+function createAlerts({
+  overdueInvoiceCount,
+  expiringContracts,
+  invoicesDueSoon,
+  roomsWithoutReading,
+  rentedRoomsWithoutContract,
+  abnormalUtilityUsage
+}) {
   const alerts = [];
 
   if (overdueInvoiceCount > 0) {
@@ -32,16 +43,62 @@ function createAlerts({ overdueInvoiceCount, expiringContracts }) {
     });
   });
 
+  if (invoicesDueSoon.length > 0) {
+    alerts.push({
+      tone: 'warning',
+      icon: '◷',
+      title: `${invoicesDueSoon.length} hóa đơn sắp đến hạn`,
+      description: 'Đến hạn thanh toán trong 7 ngày tới.'
+    });
+  }
+
+  if (roomsWithoutReading.length > 0) {
+    const roomNames = roomsWithoutReading.slice(0, 3).map(getRoomLabel).join(', ');
+    alerts.push({
+      tone: 'warning',
+      icon: 'ϟ',
+      title: `${roomsWithoutReading.length} phòng chưa ghi điện nước`,
+      description: roomNames
+    });
+  }
+
+  if (rentedRoomsWithoutContract.length > 0) {
+    const roomNames = rentedRoomsWithoutContract.slice(0, 3).map(getRoomLabel).join(', ');
+    alerts.push({
+      tone: 'danger',
+      icon: '!',
+      title: `${rentedRoomsWithoutContract.length} phòng thuê thiếu hợp đồng`,
+      description: roomNames
+    });
+  }
+
+  if (abnormalUtilityUsage.length > 0) {
+    alerts.push({
+      tone: 'danger',
+      icon: 'ϟ',
+      title: `${abnormalUtilityUsage.length} cảnh báo tiêu thụ bất thường`,
+      description: 'Điện hoặc nước tăng từ 50% so với kỳ trước.'
+    });
+  }
+
   return alerts;
 }
 
 export function renderAlertList({
   overdueInvoiceCount = 0,
-  expiringContracts = []
+  expiringContracts = [],
+  invoicesDueSoon = [],
+  roomsWithoutReading = [],
+  rentedRoomsWithoutContract = [],
+  abnormalUtilityUsage = []
 } = {}) {
   const alerts = createAlerts({
     overdueInvoiceCount,
-    expiringContracts
+    expiringContracts,
+    invoicesDueSoon,
+    roomsWithoutReading,
+    rentedRoomsWithoutContract,
+    abnormalUtilityUsage
   });
 
   if (alerts.length === 0) {

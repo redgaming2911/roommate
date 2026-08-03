@@ -79,8 +79,8 @@ function formatDateTime(value) {
  * @returns {string}
  */
 function normalizeStatus(status) {
-  return status === 'cancelled'
-    ? 'canceled'
+  return status === 'canceled'
+    ? 'cancelled'
     : status || 'draft';
 }
 
@@ -96,7 +96,7 @@ function getStatusLabel(status) {
     partial: 'Thanh toán một phần',
     paid: 'Đã thanh toán',
     overdue: 'Quá hạn',
-    canceled: 'Đã hủy'
+    cancelled: 'Đã hủy'
   };
 
   return labels[normalizeStatus(status)] ?? status;

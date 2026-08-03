@@ -188,8 +188,8 @@ function getRemainingDebt(invoice) {
  * @returns {string}
  */
 function normalizeStatus(status) {
-  if (status === 'cancelled') {
-    return 'canceled';
+  if (status === 'canceled') {
+    return 'cancelled';
   }
 
   return status || 'draft';
@@ -207,7 +207,7 @@ function getStatusLabel(status) {
     partial: 'Thanh toán một phần',
     paid: 'Đã thanh toán',
     overdue: 'Quá hạn',
-    canceled: 'Đã hủy'
+    cancelled: 'Đã hủy'
   };
 
   return labels[normalizeStatus(status)] ?? status ?? 'Không xác định';
@@ -543,7 +543,7 @@ function renderInvoiceRow(invoice) {
   const status = normalizeStatus(invoice.status);
   const remainingDebt = getRemainingDebt(invoice);
   const isDraft = status === 'draft';
-  const isCanceled = status === 'canceled';
+  const isCanceled = status === 'cancelled';
   const canCancel =
     !isDraft &&
     !isCanceled &&
@@ -1072,7 +1072,7 @@ function renderInvoicesPage(container) {
               <option value="partial">Thanh toán một phần</option>
               <option value="paid">Đã thanh toán</option>
               <option value="overdue">Quá hạn</option>
-              <option value="canceled">Đã hủy</option>
+              <option value="cancelled">Đã hủy</option>
             </select>
           </div>
         </div>

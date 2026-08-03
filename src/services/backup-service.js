@@ -154,7 +154,9 @@ export const BackupService = {
     const backup = mode === 'overwrite'
       ? this.createBackupBeforeImport()
       : null;
-    const rollbackData = backup?.data ?? createCollectionsSnapshot();
+    const rollbackData = backup
+      ? assertValidImportData(backup.data)
+      : createCollectionsSnapshot();
     const nextCollections = {};
 
     REQUIRED_BACKUP_COLLECTIONS.forEach((collectionName) => {

@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from "../constants/storage-keys.js";
 import * as StorageService from "./storage-service.js";
 import * as RoomService from "./room-service.js";
+import { CONTRACT_STATUS, ROOM_STATUS } from '../constants/statuses.js';
 
 import { validateContract } from "../business/contract-validator.js";
 import {
@@ -24,7 +25,7 @@ function findIndexById(contracts, id) {
 }
 
 function ensureNotEnded(contract) {
-  if (contract.status === "ended" || contract.status === "cancelled") {
+  if (contract.status === CONTRACT_STATUS.ENDED || contract.status === CONTRACT_STATUS.CANCELLED) {
     throw new Error("Không thể chỉnh sửa hợp đồng đã kết thúc");
   }
 }
@@ -47,6 +48,18 @@ function createContract(data) {
   const room = RoomService.getRoomById(data.roomId);
   if (!room) throw new Error("Phòng không tồn tại");
 
+  const representative = StorageService.getById(
+    STORAGE_KEYS.TENANTS,
+    data.tenantId
+  );
+  if (!representative) throw new Error('Người đại diện không tồn tại');
+
+  const duplicateCode = contracts.some((contract) =>
+    String(contract.code).toUpperCase() ===
+      String(data.code).trim().toUpperCase()
+  );
+  if (duplicateCode) throw new Error('Mã hợp đồng đã tồn tại');
+
   const validated = validateContract(data, {
     existingContracts: contracts,
     room,
@@ -56,7 +69,7 @@ function createContract(data) {
   const newContract = {
     ...validated,
     id: crypto.randomUUID(),
-    status: "draft",
+    status: CONTRACT_STATUS.DRAFT,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -75,6 +88,15 @@ function updateContract(id, data) {
 
   const existing = contracts[index];
   ensureNotEnded(existing);
+
+  if (data.code) {
+    const duplicateCode = contracts.some((contract) =>
+      contract.id !== id &&
+      String(contract.code).toUpperCase() ===
+        String(data.code).trim().toUpperCase()
+    );
+    if (duplicateCode) throw new Error('Mã hợp đồng đã tồn tại');
+  }
 
   const room = RoomService.getRoomById(data.roomId || existing.roomId);
 
@@ -115,14 +137,9 @@ function activateContract(id) {
   });
 
   // Update contract
-  contract.status = "active";
+  contract.status = CONTRACT_STATUS.ACTIVE;
   contract.updatedAt = new Date().toISOString();
-
-  // Update room (atomic intent)
-  RoomService.updateRoom(room.id, {
-    status: "occupied",
-  });
-
+  RoomService.updateRoom(room.id, { status: ROOM_STATUS.RENTED });
   saveAll(contracts);
   return contract;
 }
@@ -166,7 +183,7 @@ function endContract(id, actualEndDate = new Date().toISOString()) {
 
   const contract = contracts[index];
 
-  contract.status = "ended";
+  contract.status = CONTRACT_STATUS.ENDED;
   contract.actualEndDate = actualEndDate;
   contract.updatedAt = new Date().toISOString();
 
@@ -178,13 +195,13 @@ function endContract(id, actualEndDate = new Date().toISOString()) {
       isContractActive(c)
   );
 
+  saveAll(contracts);
+
   if (!stillActive) {
     RoomService.updateRoom(contract.roomId, {
-      status: "empty",
+      status: ROOM_STATUS.EMPTY,
     });
   }
-
-  saveAll(contracts);
   return contract;
 }
 
@@ -197,10 +214,21 @@ function cancelContract(id) {
   const contract = contracts[index];
   ensureNotEnded(contract);
 
-  contract.status = "cancelled";
+  contract.status = CONTRACT_STATUS.CANCELLED;
   contract.updatedAt = new Date().toISOString();
 
   saveAll(contracts);
+
+  const stillActive = contracts.some((item) =>
+    item.id !== id &&
+    item.roomId === contract.roomId &&
+    isContractActive(item)
+  );
+
+  if (!stillActive && RoomService.getRoomById(contract.roomId).status === ROOM_STATUS.RENTED) {
+    RoomService.updateRoom(contract.roomId, { status: ROOM_STATUS.EMPTY });
+  }
+
   return contract;
 }
 
@@ -221,6 +249,13 @@ function searchContracts(keyword) {
 function filterContracts(filters = {}) {
   let contracts = getAll();
 
+  if (filters.keyword) {
+    const keyword = String(filters.keyword).trim().toLowerCase();
+    contracts = contracts.filter((contract) =>
+      String(contract.code ?? contract.id).toLowerCase().includes(keyword)
+    );
+  }
+
   if (filters.status) {
     contracts = contracts.filter((c) => c.status === filters.status);
   }
@@ -234,7 +269,8 @@ function filterContracts(filters = {}) {
 
 function getActiveContractByRoom(roomId) {
   return getAll().find(
-    (c) => c.roomId === roomId && c.status === "active"
+    (c) => c.roomId === roomId &&
+      [CONTRACT_STATUS.ACTIVE, CONTRACT_STATUS.SOON_EXPIRE].includes(c.status)
   );
 }
 

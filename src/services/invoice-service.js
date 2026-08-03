@@ -1,216 +1,170 @@
-// invoice-service.js
-
 import * as InvoiceCalculator from '../business/invoice-calculator.js';
 import { validateInvoice } from '../business/invoice-validator.js';
+import { STORAGE_KEYS } from '../constants/storage-keys.js';
+import {
+  CONTRACT_STATUS,
+  INVOICE_STATUS
+} from '../constants/statuses.js';
 import { generateId } from '../utils/ma.js';
 import * as StorageService from './storage-service.js';
 
-// giả định các storage key
-const KEY = 'invoices';
-const CONTRACT_KEY = 'contracts';
-const METER_KEY = 'meterReadings';
-const SERVICE_KEY = 'serviceConfigs';
-const ROOM_KEY = 'rooms';
-
-// ======================
-// Helpers
-// ======================
+const KEY = STORAGE_KEYS.INVOICES;
+const ACTIVE_CONTRACT_STATUSES = new Set([
+  CONTRACT_STATUS.ACTIVE,
+  CONTRACT_STATUS.SOON_EXPIRE
+]);
 
 function getAllContracts() {
-  return StorageService.getAll(CONTRACT_KEY);
+  return StorageService.getAll(STORAGE_KEYS.CONTRACTS);
 }
 
 function getAllMeters() {
-  return StorageService.getAll(METER_KEY);
+  return StorageService.getAll(STORAGE_KEYS.METER_READINGS);
 }
 
 function getAllServices() {
-  return StorageService.getAll(SERVICE_KEY);
-}
-
-function getAllRooms() {
-  return StorageService.getAll(ROOM_KEY);
+  return StorageService.getAll(STORAGE_KEYS.SERVICE_CONFIGS);
 }
 
 function getRoomById(roomId) {
-  return getAllRooms().find(
-    (room) => room.id === roomId
-  );
+  return StorageService.getById(STORAGE_KEYS.ROOMS, roomId);
+}
+
+function toNonNegativeNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : fallback;
 }
 
 function calculateDueDate(contract, month) {
-  const paymentDay = Number(
-    contract.paymentDay ??
-    contract.monthlyPaymentDay ??
-    contract.dueDay
-  );
+  const paymentDay = Number(contract.paymentDay);
 
-  if (
-    !Number.isInteger(paymentDay) ||
-    paymentDay < 1 ||
-    paymentDay > 31
-  ) {
-    throw new Error(
-      'Ngày thanh toán hàng tháng trong hợp đồng không hợp lệ'
-    );
+  if (!Number.isInteger(paymentDay) || paymentDay < 1 || paymentDay > 31) {
+    throw new Error('Ngày thanh toán hàng tháng trong hợp đồng không hợp lệ');
   }
 
-  const [year, monthNumber] = month
-    .split('-')
-    .map(Number);
+  const [year, monthNumber] = String(month).split('-').map(Number);
 
-  if (
-    !Number.isInteger(year) ||
-    !Number.isInteger(monthNumber) ||
-    monthNumber < 1 ||
-    monthNumber > 12
-  ) {
+  if (!Number.isInteger(year) || !Number.isInteger(monthNumber) ||
+      monthNumber < 1 || monthNumber > 12) {
     throw new Error('Tháng hóa đơn không hợp lệ');
   }
 
-  const lastDayOfMonth = new Date(
-    year,
-    monthNumber,
-    0
-  ).getDate();
-
-  const normalizedDay = Math.min(
-    paymentDay,
-    lastDayOfMonth
-  );
-
-  return [
-    year,
-    String(monthNumber).padStart(2, '0'),
-    String(normalizedDay).padStart(2, '0')
-  ].join('-');
+  const day = Math.min(paymentDay, new Date(year, monthNumber, 0).getDate());
+  return `${year}-${String(monthNumber).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 function createInvoiceCode(month, room) {
-  const roomCode =
-    room?.roomCode ??
-    room?.code;
+  const roomCode = room?.code ?? room?.roomCode;
+  if (!roomCode) throw new Error('Không thể tạo mã hóa đơn vì phòng chưa có mã');
 
-  if (!roomCode) {
-    throw new Error(
-      'Không thể tạo mã hóa đơn vì phòng chưa có mã'
-    );
-  }
+  return `HD-${month.replace('-', '')}-${String(roomCode).trim().toUpperCase()}`;
+}
 
-  const normalizedMonth = month.replace('-', '');
-
-  return `HD-${normalizedMonth}-${String(roomCode)
-    .trim()
-    .toUpperCase()}`;
+function getMonthRange(month) {
+  const [year, monthNumber] = String(month).split('-').map(Number);
+  return {
+    start: new Date(year, monthNumber - 1, 1),
+    end: new Date(year, monthNumber, 0, 23, 59, 59, 999)
+  };
 }
 
 function isContractActive(contract, month) {
+  if (!ACTIVE_CONTRACT_STATUSES.has(contract.status)) return false;
+
+  const range = getMonthRange(month);
   const start = new Date(contract.startDate);
   const end = contract.endDate ? new Date(contract.endDate) : null;
-  const m = new Date(`${month}-01`);
 
-  return start <= m && (!end || end >= m);
+  return !Number.isNaN(start.getTime()) && start <= range.end &&
+    (!end || (!Number.isNaN(end.getTime()) && end >= range.start));
 }
 
 function getContractByRoomAndMonth(roomId, month) {
-  return getAllContracts().find(
-    (contract) =>
-      contract.roomId === roomId &&
-      isContractActive(contract, month)
+  return getAllContracts().find((contract) =>
+    contract.roomId === roomId && isContractActive(contract, month)
   );
 }
 
 function getMeterReading(roomId, month) {
-  return getAllMeters().find(
-    (reading) =>
-      reading.roomId === roomId &&
-      reading.month === month
+  return getAllMeters().find((reading) =>
+    reading.roomId === roomId &&
+    (reading.monthKey ?? reading.month) === month
   );
 }
 
-function buildInvoiceItems({ contract, meter, services }) {
-  const items = [];
+function isServiceApplicable(service, month) {
+  if (service.status !== 'active') return false;
 
-  // Tiền phòng
-  items.push({
+  const range = getMonthRange(month);
+  const start = service.startDate ? new Date(service.startDate) : null;
+  const end = service.endDate ? new Date(service.endDate) : null;
+
+  if (start && !Number.isNaN(start.getTime()) && start > range.end) return false;
+  if (end && !Number.isNaN(end.getTime()) && end < range.start) return false;
+  return true;
+}
+
+function getUsage(service, meter, contract) {
+  const code = String(service.code ?? '').trim().toUpperCase();
+
+  if (service.calculationType === 'usage') {
+    if (code === 'DIEN' || code.includes('DIEN')) {
+      return toNonNegativeNumber(meter.electricUsage);
+    }
+    if (code === 'NUOC' || code.includes('NUOC')) {
+      return toNonNegativeNumber(meter.waterUsage);
+    }
+    return 0;
+  }
+
+  if (service.calculationType === 'perPerson') {
+    const tenantIds = Array.isArray(contract.tenantIds)
+      ? contract.tenantIds.filter(Boolean)
+      : [];
+    return tenantIds.length || (contract.tenantId ? 1 : 0);
+  }
+
+  if (service.calculationType === 'perVehicle') {
+    return toNonNegativeNumber(contract.vehicleCount);
+  }
+
+  return 1;
+}
+
+function buildInvoiceItems({ contract, meter, services }) {
+  const rentAmount = toNonNegativeNumber(contract.rentAmount);
+  const items = [{
     type: 'rent',
     name: 'Tiền phòng',
-    unitPrice: contract.rentPrice,
+    unitPrice: rentAmount,
     quantity: 1,
-    amount: contract.rentPrice
-  });
+    amount: rentAmount
+  }];
 
-  // Điện
-  if (meter.electricUsage != null) {
-    const amount = InvoiceCalculator.calculateElectricAmount(
-      meter.electricUsage,
-      meter.electricPrice
-    );
-
-    items.push({
-      type: 'electric',
-      name: 'Tiền điện',
-      unitPrice: meter.electricPrice,
-      quantity: meter.electricUsage,
-      amount
-    });
-  }
-
-  // Nước
-  if (meter.waterUsage != null) {
-    const amount = InvoiceCalculator.calculateWaterAmount(
-      meter.waterUsage,
-      meter.waterPrice
-    );
-
-    items.push({
-      type: 'water',
-      name: 'Tiền nước',
-      unitPrice: meter.waterPrice,
-      quantity: meter.waterUsage,
-      amount
-    });
-  }
-
-  // Dịch vụ
   services.forEach((service) => {
-    let amount = 0;
+    if (service.calculationType === 'manual') return;
 
-    if (service.type === 'fixed') {
-      amount = InvoiceCalculator.calculateFixedServiceAmount(
-        service.price
-      );
-    }
-
-    if (service.type === 'per_person') {
-      amount = InvoiceCalculator.calculatePerPersonAmount(
-        contract.personCount || 1,
-        service.price
-      );
-    }
-
-    if (service.type === 'per_vehicle') {
-      amount = InvoiceCalculator.calculatePerVehicleAmount(
-        contract.vehicleCount || 0,
-        service.price
-      );
-    }
+    const quantity = getUsage(service, meter, contract);
+    const unitPrice = toNonNegativeNumber(service.unitPrice);
 
     items.push({
+      serviceId: service.id,
       type: 'service',
+      code: service.code,
       name: service.name,
-      unitPrice: service.price,
-      quantity: 1,
-      amount
+      unit: service.unit,
+      unitPrice,
+      quantity,
+      amount: quantity * unitPrice
     });
   });
 
   return items;
 }
 
-// ======================
-// Service functions
-// ======================
+function getApplicableServices(month) {
+  return getAllServices().filter((service) => isServiceApplicable(service, month));
+}
 
 export function getInvoices() {
   return StorageService.getAll(KEY);
@@ -221,528 +175,244 @@ export function getInvoiceById(id) {
 }
 
 export function getInvoiceByRoomAndMonth(roomId, month) {
-  return getInvoices().find(
-    (invoice) =>
-      invoice.roomId === roomId &&
-      invoice.month === month
+  return getInvoices().find((invoice) =>
+    invoice.roomId === roomId && invoice.month === month
   );
 }
 
 export function createInvoice(data) {
-  const invoices = getInvoices();
-
   if (getInvoiceByRoomAndMonth(data.roomId, data.month)) {
-    throw new Error(
-      'Đã tồn tại hóa đơn cho phòng trong tháng này'
-    );
+    throw new Error('Đã tồn tại hóa đơn cho phòng trong tháng này');
   }
 
   const room = getRoomById(data.roomId);
-
-  if (!room) {
-    throw new Error('Không tìm thấy phòng');
-  }
+  if (!room) throw new Error('Không tìm thấy phòng');
 
   const invoice = {
     id: generateId(),
-    invoiceCode:
-      data.invoiceCode ??
-      createInvoiceCode(data.month, room),
-    status: 'draft',
+    invoiceCode: data.invoiceCode ?? createInvoiceCode(data.month, room),
+    status: INVOICE_STATUS.DRAFT,
     paidAmount: 0,
+    remainingAmount: toNonNegativeNumber(data.total),
     createdAt: new Date().toISOString(),
     ...data
   };
 
   validateInvoice(invoice);
-
-  invoices.push(invoice);
-  StorageService.replaceAll(KEY, invoices);
-
-  return invoice;
+  return StorageService.create(KEY, invoice);
 }
 
-export function generateInvoiceForRoom(
-  roomId,
-  month,
-  discount = 0
-) {
+export function generateInvoiceForRoom(roomId, month, discount = 0) {
   if (getInvoiceByRoomAndMonth(roomId, month)) {
     throw new Error('Hóa đơn đã tồn tại');
   }
 
   const room = getRoomById(roomId);
+  if (!room) throw new Error('Không tìm thấy phòng');
 
-  if (!room) {
-    throw new Error('Không tìm thấy phòng');
-  }
-
-  const contract = getContractByRoomAndMonth(
-    roomId,
-    month
-  );
-
-  if (!contract) {
-    throw new Error('Không có hợp đồng hiệu lực');
-  }
+  const contract = getContractByRoomAndMonth(roomId, month);
+  if (!contract) throw new Error('Không có hợp đồng hiệu lực');
 
   const meter = getMeterReading(roomId, month);
-
-  if (!meter) {
-    throw new Error('Chưa có chỉ số điện nước');
-  }
-
-  const services = getAllServices().filter(
-    (service) => service.active
-  );
+  if (!meter) throw new Error('Chưa có chỉ số điện nước');
 
   const items = buildInvoiceItems({
     contract,
     meter,
-    services
+    services: getApplicableServices(month)
   });
-
-  const total =
-    InvoiceCalculator.calculateInvoiceTotal(
-      items,
-      discount
-    );
-
-  const dueDate = calculateDueDate(
-    contract,
-    month
-  );
+  const normalizedDiscount = toNonNegativeNumber(discount);
+  const total = InvoiceCalculator.calculateInvoiceTotal(items, normalizedDiscount);
+  const now = new Date().toISOString();
 
   const invoice = {
     id: generateId(),
-    invoiceCode: createInvoiceCode(
-      month,
-      room
-    ),
+    invoiceCode: createInvoiceCode(month, room),
     roomId,
+    contractId: contract.id,
     month,
-    dueDate,
+    dueDate: calculateDueDate(contract, month),
     items,
-    discount,
+    discount: normalizedDiscount,
     total,
     paidAmount: 0,
-    status: 'draft',
-    createdAt: new Date().toISOString()
+    remainingAmount: total,
+    status: INVOICE_STATUS.DRAFT,
+    createdAt: now,
+    updatedAt: now
   };
 
   validateInvoice(invoice);
-
-  const invoices = getInvoices();
-
-  invoices.push(invoice);
-  StorageService.replaceAll(KEY, invoices);
-
-  return invoice;
+  return StorageService.create(KEY, invoice);
 }
 
-export function generateInvoicesForMonth(
-  month,
-  discount = 0
-) {
-  const contracts = getAllContracts().filter(
-    (contract) => isContractActive(contract, month)
-  );
-
-  const results = [];
-
-  contracts.forEach((contract) => {
-    try {
-      const invoice = generateInvoiceForRoom(
-        contract.roomId,
-        month,
-        discount
-      );
-
-      results.push({
-        success: true,
-        invoice
-      });
-    } catch (error) {
-      results.push({
-        success: false,
-        roomId: contract.roomId,
-        error: error.message
-      });
-    }
-  });
-
-  return results;
+export function generateInvoicesForMonth(month, discount = 0) {
+  return getAllContracts()
+    .filter((contract) => isContractActive(contract, month))
+    .map((contract) => {
+      try {
+        return {
+          success: true,
+          invoice: generateInvoiceForRoom(contract.roomId, month, discount)
+        };
+      } catch (error) {
+        return { success: false, roomId: contract.roomId, error: error.message };
+      }
+    });
 }
 
 export function updateDraftInvoice(id, data) {
-  const invoices = getInvoices();
-  const index = invoices.findIndex(
-    (invoice) => invoice.id === id
-  );
-
-  if (index === -1) {
-    throw new Error('Không tìm thấy hóa đơn');
-  }
-
-  const invoice = invoices[index];
-
-  if (invoice.status !== 'draft') {
+  const invoice = getInvoiceById(id);
+  if (!invoice) throw new Error('Không tìm thấy hóa đơn');
+  if (invoice.status !== INVOICE_STATUS.DRAFT) {
     throw new Error('Chỉ được sửa hóa đơn nháp');
   }
 
-  const updated = {
-    ...invoice,
-    ...data,
-    updatedAt: new Date().toISOString()
-  };
-
-  const discount = updated.discount ?? 0;
-
+  const updated = { ...invoice, ...data, updatedAt: new Date().toISOString() };
   updated.total = InvoiceCalculator.calculateInvoiceTotal(
     updated.items,
-    discount
+    toNonNegativeNumber(updated.discount)
   );
-
+  updated.remainingAmount = Math.max(updated.total - toNonNegativeNumber(updated.paidAmount), 0);
   validateInvoice(updated);
-
-  invoices[index] = updated;
-  StorageService.replaceAll(KEY, invoices);
-
-  return updated;
+  return StorageService.update(KEY, id, updated);
 }
 
 export function addManualItem(invoiceId, item) {
-  const invoices = getInvoices();
-  const index = invoices.findIndex(
-    (invoice) => invoice.id === invoiceId
-  );
-
-  if (index === -1) {
-    throw new Error('Không tìm thấy hóa đơn');
+  const invoice = getInvoiceById(invoiceId);
+  if (!invoice) throw new Error('Không tìm thấy hóa đơn');
+  if (invoice.status !== INVOICE_STATUS.DRAFT) {
+    throw new Error('Chỉ được thêm khoản phát sinh vào hóa đơn nháp');
   }
 
-  const invoice = invoices[index];
+  const name = typeof item?.name === 'string' ? item.name.trim() : '';
+  if (!name) throw new Error('Tên khoản phát sinh là bắt buộc');
 
-  if (invoice.status !== 'draft') {
-    throw new Error(
-      'Chỉ được thêm khoản phát sinh vào hóa đơn nháp'
-    );
-  }
-
-  if (!item || typeof item !== 'object') {
-    throw new Error('Khoản phát sinh không hợp lệ');
-  }
-
-  const name =
-    typeof item.name === 'string'
-      ? item.name.trim()
-      : '';
-
-  if (!name) {
-    throw new Error('Tên khoản phát sinh là bắt buộc');
-  }
-
-  const quantity = item.quantity ?? 1;
-  const unitPrice = item.unitPrice;
-  const amount =
-    item.amount ??
-    Number(quantity) * Number(unitPrice);
-
+  const quantity = toNonNegativeNumber(item.quantity, 1);
+  const unitPrice = toNonNegativeNumber(item.unitPrice);
   const manualItem = {
     id: generateId(),
     type: 'manual',
     name,
     quantity,
     unitPrice,
-    amount,
-    note:
-      typeof item.note === 'string'
-        ? item.note.trim()
-        : ''
+    amount: item.amount == null
+      ? quantity * unitPrice
+      : toNonNegativeNumber(item.amount),
+    note: typeof item.note === 'string' ? item.note.trim() : ''
   };
 
-  const updatedInvoice = {
-    ...invoice,
-    items: [...invoice.items, manualItem],
-    updatedAt: new Date().toISOString()
-  };
-
-  updatedInvoice.total =
-    InvoiceCalculator.calculateInvoiceTotal(
-      updatedInvoice.items,
-      updatedInvoice.discount ?? 0
-    );
-
-  validateInvoice(updatedInvoice);
-
-  invoices[index] = updatedInvoice;
-  StorageService.replaceAll(KEY, invoices);
-
+  updateDraftInvoice(invoiceId, {
+    items: [...invoice.items, manualItem]
+  });
   return manualItem;
 }
 
 export function removeManualItem(invoiceId, itemId) {
-  const invoices = getInvoices();
-  const index = invoices.findIndex(
-    (invoice) => invoice.id === invoiceId
-  );
-
-  if (index === -1) {
-    throw new Error('Không tìm thấy hóa đơn');
-  }
-
-  const invoice = invoices[index];
-
-  if (invoice.status !== 'draft') {
+  const invoice = getInvoiceById(invoiceId);
+  if (!invoice) throw new Error('Không tìm thấy hóa đơn');
+  if (invoice.status !== INVOICE_STATUS.DRAFT) {
     throw new Error('Chỉ được sửa hóa đơn nháp');
   }
 
-  const item = invoice.items.find(
-    (invoiceItem) => invoiceItem.id === itemId
-  );
-
-  if (!item) {
-    throw new Error('Không tìm thấy khoản phát sinh');
-  }
-
+  const item = invoice.items.find((current) => current.id === itemId);
+  if (!item) throw new Error('Không tìm thấy khoản phát sinh');
   if (item.type !== 'manual') {
-    throw new Error(
-      'Chỉ được xóa khoản phát sinh thủ công'
-    );
+    throw new Error('Chỉ được xóa khoản phát sinh thủ công');
   }
 
-  const updatedInvoice = {
-    ...invoice,
-    items: invoice.items.filter(
-      (invoiceItem) => invoiceItem.id !== itemId
-    ),
-    updatedAt: new Date().toISOString()
-  };
-
-  updatedInvoice.total =
-    InvoiceCalculator.calculateInvoiceTotal(
-      updatedInvoice.items,
-      updatedInvoice.discount ?? 0
-    );
-
-  validateInvoice(updatedInvoice);
-
-  invoices[index] = updatedInvoice;
-  StorageService.replaceAll(KEY, invoices);
-
-  return updatedInvoice;
+  return updateDraftInvoice(invoiceId, {
+    items: invoice.items.filter((current) => current.id !== itemId)
+  });
 }
 
 export function finalizeInvoice(id) {
-  const invoices = getInvoices();
-
-  const index = invoices.findIndex(
-    (invoice) => invoice.id === id
-  );
-
-  if (index === -1) {
-    throw new Error('Không tìm thấy hóa đơn');
+  const invoice = getInvoiceById(id);
+  if (!invoice) throw new Error('Không tìm thấy hóa đơn');
+  if (invoice.status !== INVOICE_STATUS.DRAFT) {
+    throw new Error('Chỉ hóa đơn nháp mới được chốt');
   }
-
-  const invoice = invoices[index];
-
-  if (invoice.status !== 'draft') {
-    throw new Error(
-      'Chỉ hóa đơn nháp mới được chốt'
-    );
-  }
-
-  if (!invoice.dueDate) {
-    throw new Error(
-      'Hóa đơn chưa có hạn thanh toán'
-    );
-  }
+  if (!invoice.dueDate) throw new Error('Hóa đơn chưa có hạn thanh toán');
 
   const now = new Date().toISOString();
-
-  const status =
-    InvoiceCalculator.determineInvoiceStatus(
+  const finalized = {
+    ...invoice,
+    status: InvoiceCalculator.determineInvoiceStatus(
       invoice.total,
       invoice.paidAmount ?? 0,
       invoice.dueDate,
       now
-    );
-
-  const finalizedInvoice = {
-    ...invoice,
-    status,
+    ),
     finalizedAt: now,
     updatedAt: now
   };
 
-  validateInvoice(finalizedInvoice);
-
-  invoices[index] = finalizedInvoice;
-  StorageService.replaceAll(KEY, invoices);
-
-  return finalizedInvoice;
+  validateInvoice(finalized);
+  return StorageService.update(KEY, id, finalized);
 }
 
 export function cancelInvoice(id) {
-  const invoices = getInvoices();
-  const index = invoices.findIndex(
-    (invoice) => invoice.id === id
-  );
-
-  if (index === -1) {
-    throw new Error('Không tìm thấy hóa đơn');
+  const invoice = getInvoiceById(id);
+  if (!invoice) throw new Error('Không tìm thấy hóa đơn');
+  if (invoice.status === INVOICE_STATUS.PAID) {
+    throw new Error('Không thể hủy hóa đơn đã thanh toán');
   }
-
-  const invoice = invoices[index];
-
-  if (invoice.status === 'paid') {
-    throw new Error(
-      'Không thể hủy hóa đơn đã thanh toán'
-    );
-  }
-
-  if (invoice.status === 'canceled') {
+  if ([INVOICE_STATUS.CANCELLED, 'canceled'].includes(invoice.status)) {
     throw new Error('Hóa đơn đã được hủy');
   }
 
-  const canceledInvoice = {
+  const now = new Date().toISOString();
+  return StorageService.update(KEY, id, {
     ...invoice,
-    status: 'canceled',
-    canceledAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  invoices[index] = canceledInvoice;
-  StorageService.replaceAll(KEY, invoices);
-
-  return canceledInvoice;
+    status: INVOICE_STATUS.CANCELLED,
+    cancelledAt: now,
+    updatedAt: now
+  });
 }
 
 export function deleteDraftInvoice(id) {
-  const invoices = getInvoices();
-  const invoice = invoices.find(
-    (item) => item.id === id
-  );
-
-  if (!invoice) {
-    throw new Error('Không tìm thấy hóa đơn');
-  }
-
-  if (invoice.status !== 'draft') {
+  const invoice = getInvoiceById(id);
+  if (!invoice) throw new Error('Không tìm thấy hóa đơn');
+  if (invoice.status !== INVOICE_STATUS.DRAFT) {
     throw new Error('Chỉ xóa được hóa đơn nháp');
   }
-
-  if ((invoice.paidAmount ?? 0) > 0) {
-    throw new Error(
-      'Không thể xóa hóa đơn đã có thanh toán'
-    );
+  if (toNonNegativeNumber(invoice.paidAmount) > 0) {
+    throw new Error('Không thể xóa hóa đơn đã có thanh toán');
   }
 
-  const filteredInvoices = invoices.filter(
-    (item) => item.id !== id
-  );
-
-  StorageService.replaceAll(KEY, filteredInvoices);
-
-  return true;
+  return StorageService.remove(KEY, id);
 }
 
 export function filterInvoices(filters = {}) {
-  let invoices = getInvoices();
-
-  if (filters.roomId) {
-    invoices = invoices.filter(
-      (invoice) => invoice.roomId === filters.roomId
-    );
-  }
-
-  if (filters.month) {
-    invoices = invoices.filter(
-      (invoice) => invoice.month === filters.month
-    );
-  }
-
-  if (filters.status) {
-    invoices = invoices.filter(
-      (invoice) => invoice.status === filters.status
-    );
-  }
-
-  return invoices;
+  return getInvoices().filter((invoice) =>
+    (!filters.roomId || invoice.roomId === filters.roomId) &&
+    (!filters.month || invoice.month === filters.month) &&
+    (!filters.status || invoice.status === filters.status)
+  );
 }
 
 export function recalculateInvoice(id) {
-  const invoices = getInvoices();
-  const index = invoices.findIndex(
-    (invoice) => invoice.id === id
-  );
-
-  if (index === -1) {
-    throw new Error('Không tìm thấy hóa đơn');
+  const invoice = getInvoiceById(id);
+  if (!invoice) throw new Error('Không tìm thấy hóa đơn');
+  if (invoice.status !== INVOICE_STATUS.DRAFT) {
+    throw new Error('Chỉ hóa đơn nháp mới được tính lại');
   }
 
-  const invoice = invoices[index];
+  const contract = getContractByRoomAndMonth(invoice.roomId, invoice.month);
+  if (!contract) throw new Error('Không có hợp đồng hiệu lực');
 
-  if (invoice.status !== 'draft') {
-    throw new Error(
-      'Chỉ hóa đơn nháp mới được tính lại'
-    );
-  }
-
-  const contract = getContractByRoomAndMonth(
-    invoice.roomId,
-    invoice.month
-  );
-
-  if (!contract) {
-    throw new Error('Không có hợp đồng hiệu lực');
-  }
-
-  const meter = getMeterReading(
-    invoice.roomId,
-    invoice.month
-  );
-
-  if (!meter) {
-    throw new Error('Chưa có chỉ số điện nước');
-  }
-
-  const services = getAllServices().filter(
-    (service) => service.active
-  );
+  const meter = getMeterReading(invoice.roomId, invoice.month);
+  if (!meter) throw new Error('Chưa có chỉ số điện nước');
 
   const automaticItems = buildInvoiceItems({
     contract,
     meter,
-    services
+    services: getApplicableServices(invoice.month)
   });
+  const manualItems = invoice.items.filter((item) => item.type === 'manual');
 
-  const manualItems = invoice.items.filter(
-    (item) => item.type === 'manual'
-  );
-
-  const items = [
-    ...automaticItems,
-    ...manualItems
-  ];
-
-  const total =
-    InvoiceCalculator.calculateInvoiceTotal(
-      items,
-      invoice.discount ?? 0
-    );
-
-  const updatedInvoice = {
-    ...invoice,
-    items,
-    total,
-    updatedAt: new Date().toISOString()
-  };
-
-  validateInvoice(updatedInvoice);
-
-  invoices[index] = updatedInvoice;
-  StorageService.replaceAll(KEY, invoices);
-
-  return updatedInvoice;
+  return updateDraftInvoice(id, {
+    contractId: contract.id,
+    items: [...automaticItems, ...manualItems]
+  });
 }

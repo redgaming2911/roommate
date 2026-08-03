@@ -1,0 +1,17 @@
+.services-page { min-width: 0; }
+.services-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 18px; }
+.services-header p { color: #64748b; margin: 0; }
+.service-filters { display: grid; gap: 10px; grid-template-columns: minmax(220px, 1fr) 220px; margin-bottom: 16px; }
+.service-empty { color: #64748b; padding: 40px; text-align: center; }
+.service-status { border-radius: 999px; display: inline-block; font-size: 12px; padding: 4px 8px; }
+.service-status-active { background: #dcfce7; color: #166534; }
+.service-status-inactive { background: #e2e8f0; color: #475569; }
+.service-modal { align-items: center; background: rgba(15,23,42,.55); display: flex; inset: 0; justify-content: center; position: fixed; z-index: 9999; }
+.service-modal-content { background: #fff; border-radius: 10px; max-height: 90vh; overflow-y: auto; padding: 20px; width: min(720px, calc(100vw - 32px)); }
+.service-form-header,.service-form-grid { display: grid; gap: 12px; }
+.service-form-header { align-items: center; grid-template-columns: 1fr auto; }
+.service-form-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.service-form-wide { grid-column: 1 / -1; }
+.service-form-error { color: #b91c1c; min-height: 20px; }
+.service-form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+@media (max-width:720px) { .service-filters,.service-form-grid { grid-template-columns:1fr; } .service-form-wide { grid-column:auto; } }

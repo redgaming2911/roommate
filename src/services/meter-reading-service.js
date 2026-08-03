@@ -122,7 +122,8 @@ export const MeterReadingService = {
     // Check invoice tồn tại
     const invoices = StorageService.getAll(INVOICE_KEY);
     const relatedInvoice = invoices.find(
-      inv => inv.roomId === current.roomId && inv.monthKey === current.monthKey
+      inv => inv.roomId === current.roomId &&
+        (inv.monthKey ?? inv.month) === current.monthKey
     );
 
     const previous = this.getPreviousReading(
@@ -174,7 +175,8 @@ export const MeterReadingService = {
 
     const invoices = StorageService.getAll(INVOICE_KEY);
     const related = invoices.some(
-      inv => inv.roomId === current.roomId && inv.monthKey === current.monthKey
+      inv => inv.roomId === current.roomId &&
+        (inv.monthKey ?? inv.month) === current.monthKey
     );
 
     if (related) {
@@ -192,7 +194,9 @@ export const MeterReadingService = {
   },
 
   getRoomsWithoutReading(month) {
-    const rooms = RoomService.getRooms();
+    const rooms = RoomService.getRooms().filter(
+      (room) => room.status === 'rented'
+    );
     const readings = this.getReadings();
 
     return rooms.filter(room => {

@@ -270,6 +270,127 @@ export function calculateOverdueInvoiceCount(
   }).length;
 }
 
+export function calculateUnpaidInvoiceCount(invoices = [], payments = []) {
+  const paidByInvoice = createPaidAmountMap(payments);
+
+  return invoices.filter((invoice) =>
+    isIncludedInvoice(invoice) &&
+    getRemainingDebt(invoice, paidByInvoice) > 0
+  ).length;
+}
+
+export function calculateInvoicesDueSoon(
+  invoices = [],
+  payments = [],
+  currentDate = new Date(),
+  withinDays = 7
+) {
+  const today = startOfDay(currentDate);
+  const limit = new Date(today);
+  limit.setDate(limit.getDate() + Math.max(toNumber(withinDays), 0));
+  const paidByInvoice = createPaidAmountMap(payments);
+
+  return invoices
+    .filter((invoice) => {
+      if (!isIncludedInvoice(invoice) || !invoice.dueDate) return false;
+      if (getRemainingDebt(invoice, paidByInvoice) <= 0) return false;
+
+      const dueDate = startOfDay(invoice.dueDate);
+      return dueDate >= today && dueDate <= limit;
+    })
+    .sort((first, second) => first.dueDate.localeCompare(second.dueDate));
+}
+
+export function calculateRoomsWithoutReading(
+  rooms = [],
+  readings = [],
+  month = ''
+) {
+  const roomIdsWithReading = new Set(
+    readings
+      .filter((reading) => !month ||
+        getMonth(reading, ['monthKey', 'month', 'createdAt']) === month)
+      .map((reading) => reading.roomId)
+  );
+
+  return rooms.filter((room) =>
+    RENTED_ROOM_STATUSES.has(room.status) &&
+    !roomIdsWithReading.has(room.id)
+  );
+}
+
+export function calculateRentedRoomsWithoutContract(
+  rooms = [],
+  contracts = []
+) {
+  const activeRoomIds = new Set(
+    contracts
+      .filter((contract) => ACTIVE_CONTRACT_STATUSES.has(contract.status))
+      .map((contract) => contract.roomId)
+  );
+
+  return rooms.filter((room) =>
+    RENTED_ROOM_STATUSES.has(room.status) &&
+    !activeRoomIds.has(room.id)
+  );
+}
+
+export function calculateAbnormalUtilityUsage(
+  readings = [],
+  thresholdPercent = 50
+) {
+  const grouped = new Map();
+
+  readings.forEach((reading) => {
+    if (!reading?.roomId) return;
+    const month = getMonth(reading, ['monthKey', 'month', 'createdAt']);
+    if (!month) return;
+
+    const roomReadings = grouped.get(reading.roomId) || [];
+    roomReadings.push({ ...reading, month });
+    grouped.set(reading.roomId, roomReadings);
+  });
+
+  const anomalies = [];
+
+  grouped.forEach((roomReadings, roomId) => {
+    const sorted = roomReadings.sort((first, second) =>
+      first.month.localeCompare(second.month)
+    );
+
+    for (let index = 1; index < sorted.length; index += 1) {
+      const previous = sorted[index - 1];
+      const current = sorted[index];
+      const previousElectric = toNumber(previous.electricUsage);
+      const previousWater = toNumber(previous.waterUsage);
+      const electricChangePercent = previousElectric > 0
+        ? ((toNumber(current.electricUsage) - previousElectric) /
+            previousElectric) * 100
+        : 0;
+      const waterChangePercent = previousWater > 0
+        ? ((toNumber(current.waterUsage) - previousWater) /
+            previousWater) * 100
+        : 0;
+
+      if (electricChangePercent >= thresholdPercent ||
+          waterChangePercent >= thresholdPercent) {
+        anomalies.push({
+          roomId,
+          month: current.month,
+          electricUsage: toNumber(current.electricUsage),
+          waterUsage: toNumber(current.waterUsage),
+          electricChangePercent: Number(electricChangePercent.toFixed(2)),
+          waterChangePercent: Number(waterChangePercent.toFixed(2))
+        });
+      }
+    }
+  });
+
+  return anomalies.sort((first, second) =>
+    second.month.localeCompare(first.month)
+  );
+}
+
 export function calculateUtilityConsumptionByMonth(readings = []) {
   const grouped = new Map();
 
@@ -337,8 +458,8 @@ export function calculateInvoiceStatusDistribution(invoices = []) {
 
   invoices.forEach((invoice) => {
     const status =
-      invoice.status === 'cancelled'
-        ? 'canceled'
+      invoice.status === 'canceled'
+        ? 'cancelled'
         : invoice.status || 'unknown';
 
     const current = grouped.get(status) || {

@@ -414,7 +414,8 @@
     color: #dc2626;
 }
 
-.invoice-status-canceled {
+.invoice-status-canceled,
+.invoice-status-cancelled {
     background: #e5e7eb;
     color: #6b7280;
 }

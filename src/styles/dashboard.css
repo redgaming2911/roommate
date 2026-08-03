@@ -89,6 +89,7 @@
   display: flex;
   gap: 13px;
   min-height: 132px;
+  min-width: 0;
   padding: 18px;
 }
 
@@ -113,6 +114,11 @@
 .dashboard-stat-card--danger .dashboard-stat-card__icon {
   background: #fef2f2;
   color: #dc2626;
+}
+
+.dashboard-stat-card--warning .dashboard-stat-card__icon {
+  background: #fff7ed;
+  color: #ea580c;
 }
 
 .dashboard-stat-card--neutral .dashboard-stat-card__icon {
@@ -147,6 +153,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+}
+
+.dashboard-stat-card__metric strong {
+  overflow-wrap: anywhere;
 }
 
 .dashboard-stat-card__metric strong {

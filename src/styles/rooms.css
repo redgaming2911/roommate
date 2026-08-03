@@ -1,6 +1,6 @@
-.rooms-page .filters {
+.rooms-filters {
     display: grid;
-    grid-template-columns: 1fr 200px 200px;
+    grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(150px, 190px));
     gap: 10px;
 }
 
@@ -27,7 +27,9 @@
 .modal-content-custom {
     background: #fff;
     padding: 20px;
-    width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    width: min(720px, calc(100vw - 32px));
     border-radius: 8px;
 }
 
@@ -38,4 +40,39 @@
 .error {
     color: red;
     font-size: 12px;
+}
+
+.room-form-header,
+.room-form-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.room-form-header {
+    align-items: center;
+    grid-template-columns: 1fr auto;
+}
+
+.room-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.room-form-grid label {
+    color: #475569;
+    font-size: 13px;
+}
+
+.room-form-note {
+    grid-column: 1 / -1;
+}
+
+.room-status-empty { background: #e2e8f0; color: #475569; }
+.room-status-rented { background: #dcfce7; color: #166534; }
+.room-status-repairing { background: #fef3c7; color: #92400e; }
+.room-status-inactive { background: #fee2e2; color: #991b1b; }
+
+@media (max-width: 800px) {
+    .rooms-filters,
+    .room-form-grid { grid-template-columns: 1fr; }
+    .room-form-note { grid-column: auto; }
 }

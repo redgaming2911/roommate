@@ -5,11 +5,11 @@ const routes = {
   '/rooms': () => import('./pages/rooms-page.js'),
   '/tenants': () => import('./pages/tenants-page.js'),
   '/contracts': () => import('./pages/contracts-page.js'),
-  '/meters': () => import('./pages/meters.page.js'),
+  '/meters': () => import('./pages/meter-readings-page.js'),
   '/services': () => import('./pages/services-page.js'),
   '/invoices': () => import('./pages/invoices-page.js'),
   '/payments': () => import('./pages/payments-page.js'),
-  '/debts': () => import('./pages/debts.page.js'),
+  '/debts': () => import('./pages/debts-page.js'),
   '/reports': () => import('./pages/reports-page.js'),
   '/settings': () => import('./pages/settings-page.js')
 };

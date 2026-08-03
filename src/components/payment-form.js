@@ -70,8 +70,8 @@ function showNotification(message, type = 'success') {
  * @returns {string}
  */
 function normalizeStatus(status) {
-  return status === 'cancelled'
-    ? 'canceled'
+  return status === 'canceled'
+    ? 'cancelled'
     : status;
 }
 
@@ -88,7 +88,7 @@ function getPayableInvoices() {
 
     return (
       status !== 'draft' &&
-      status !== 'canceled' &&
+      status !== 'cancelled' &&
       status !== 'paid' &&
       paidAmount < total
     );
@@ -548,7 +548,7 @@ export function openPaymentForm({
     const invoiceIsBlocked =
       selectedInvoice &&
       (
-        invoiceStatus === 'canceled' ||
+        invoiceStatus === 'cancelled' ||
         invoiceStatus === 'paid' ||
         getRemainingAmount(selectedInvoice) <= 0
       );
