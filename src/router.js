@@ -1,7 +1,7 @@
 // src/router.js
 
 const routes = {
-  '/dashboard': () => import('./pages/dashboard.page.js'),
+  '/dashboard': () => import('./pages/dashboard-page.js'),
   '/rooms': () => import('./pages/rooms-page.js'),
   '/tenants': () => import('./pages/tenants-page.js'),
   '/contracts': () => import('./pages/contracts-page.js'),
@@ -10,7 +10,7 @@ const routes = {
   '/invoices': () => import('./pages/invoices-page.js'),
   '/payments': () => import('./pages/payments-page.js'),
   '/debts': () => import('./pages/debts.page.js'),
-  '/reports': () => import('./pages/reports.page.js'),
+  '/reports': () => import('./pages/reports-page.js'),
   '/settings': () => import('./pages/settings.page.js')
 };
 

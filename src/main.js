@@ -1,10 +1,12 @@
 import { renderLayout } from './components/layout.js';
 import { initRouter } from './router.js';
 import { initConfirmDialog } from './components/confirm-dialog.js';
+import { seedIfEmpty } from './services/seed-service.js';
 
 function initApp() {
   const app = document.getElementById('app');
 
+  seedIfEmpty();
   renderLayout(app);
   initConfirmDialog();
   bindMenuNavigation();

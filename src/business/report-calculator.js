@@ -176,6 +176,22 @@ export function calculateCollectedAmountByMonth(payments = []) {
   return toSortedSeries(grouped, 'month');
 }
 
+export function calculateTotalInvoiceValue(invoices = []) {
+  return invoices
+    .filter(isIncludedInvoice)
+    .reduce(
+      (total, invoice) => total + toNumber(invoice.total),
+      0
+    );
+}
+
+export function calculateTotalCollectedAmount(payments = []) {
+  return payments.reduce(
+    (total, payment) => total + toNumber(payment.amount),
+    0
+  );
+}
+
 export function calculateTotalDebt(invoices = [], payments = []) {
   const paidByInvoice = createPaidAmountMap(payments);
 
@@ -208,6 +224,32 @@ export function calculateDebtByMonth(invoices = [], payments = []) {
   });
 
   return toSortedSeries(grouped, 'month');
+}
+
+export function calculateDebtByRoom(invoices = [], payments = []) {
+  const grouped = new Map();
+  const paidByInvoice = createPaidAmountMap(payments);
+
+  invoices.filter(isIncludedInvoice).forEach((invoice) => {
+    if (!invoice?.roomId) return;
+
+    const current = grouped.get(invoice.roomId) || {
+      invoiceTotal: 0,
+      collectedAmount: 0,
+      debtAmount: 0,
+      outstandingInvoiceCount: 0
+    };
+    const paidAmount = getInvoicePaidAmount(invoice, paidByInvoice);
+    const remainingDebt = getRemainingDebt(invoice, paidByInvoice);
+
+    current.invoiceTotal += toNumber(invoice.total);
+    current.collectedAmount += paidAmount;
+    current.debtAmount += remainingDebt;
+    if (remainingDebt > 0) current.outstandingInvoiceCount += 1;
+    grouped.set(invoice.roomId, current);
+  });
+
+  return toSortedSeries(grouped, 'roomId');
 }
 
 export function calculateOverdueInvoiceCount(
@@ -264,6 +306,25 @@ export function calculateElectricityConsumptionByRoom(readings = []) {
 
     current.electricUsage += toNumber(
       reading.electricUsage ?? reading.electricity
+    );
+    grouped.set(reading.roomId, current);
+  });
+
+  return toSortedSeries(grouped, 'roomId');
+}
+
+export function calculateWaterConsumptionByRoom(readings = []) {
+  const grouped = new Map();
+
+  readings.forEach((reading) => {
+    if (!reading?.roomId) return;
+
+    const current = grouped.get(reading.roomId) || {
+      waterUsage: 0
+    };
+
+    current.waterUsage += toNumber(
+      reading.waterUsage ?? reading.water
     );
     grouped.set(reading.roomId, current);
   });

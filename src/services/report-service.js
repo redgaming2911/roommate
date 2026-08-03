@@ -159,6 +159,52 @@ function mergeMonthlyFinancialData(revenue, collected, debt) {
     }));
 }
 
+function mergeRoomReportData(
+  rooms,
+  debtByRoom,
+  electricityByRoom,
+  waterByRoom
+) {
+  const grouped = new Map();
+  const roomsById = new Map(rooms.map((room) => [room.id, room]));
+
+  function getRow(roomId) {
+    if (!grouped.has(roomId)) {
+      const room = roomsById.get(roomId);
+
+      grouped.set(roomId, {
+        roomId,
+        roomCode: room?.code ?? roomId,
+        roomName: room?.name ?? '',
+        invoiceTotal: 0,
+        collectedAmount: 0,
+        debtAmount: 0,
+        outstandingInvoiceCount: 0,
+        electricUsage: 0,
+        waterUsage: 0
+      });
+    }
+
+    return grouped.get(roomId);
+  }
+
+  debtByRoom.forEach((item) => {
+    Object.assign(getRow(item.roomId), item);
+  });
+
+  electricityByRoom.forEach((item) => {
+    getRow(item.roomId).electricUsage = item.electricUsage;
+  });
+
+  waterByRoom.forEach((item) => {
+    getRow(item.roomId).waterUsage = item.waterUsage;
+  });
+
+  return Array.from(grouped.values()).sort((first, second) =>
+    first.roomCode.localeCompare(second.roomCode, 'vi')
+  );
+}
+
 export const ReportService = {
   getReport({
     fromMonth = '',
@@ -185,6 +231,18 @@ export const ReportService = {
       ReportCalculator.calculateUtilityConsumptionByMonth(
         data.meterReadings
       );
+    const debtByRoom = ReportCalculator.calculateDebtByRoom(
+      data.invoices,
+      data.invoicePayments
+    );
+    const electricityByRoom =
+      ReportCalculator.calculateElectricityConsumptionByRoom(
+        data.meterReadings
+      );
+    const waterByRoom =
+      ReportCalculator.calculateWaterConsumptionByRoom(
+        data.meterReadings
+      );
 
     return {
       roomStatistics: getRoomStatistics(data.rooms),
@@ -193,6 +251,10 @@ export const ReportService = {
       revenueByMonth,
       collectedByMonth,
       debtByMonth,
+      totalInvoiceValue:
+        ReportCalculator.calculateTotalInvoiceValue(data.invoices),
+      totalCollectedAmount:
+        ReportCalculator.calculateTotalCollectedAmount(data.payments),
       financialByMonth: mergeMonthlyFinancialData(
         revenueByMonth,
         collectedByMonth,
@@ -217,10 +279,15 @@ export const ReportService = {
         (total, item) => total + item.waterUsage,
         0
       ),
-      electricityByRoom:
-        ReportCalculator.calculateElectricityConsumptionByRoom(
-          data.meterReadings
-        ),
+      debtByRoom,
+      electricityByRoom,
+      waterByRoom,
+      roomBreakdown: mergeRoomReportData(
+        data.rooms,
+        debtByRoom,
+        electricityByRoom,
+        waterByRoom
+      ),
       invoiceStatusDistribution:
         ReportCalculator.calculateInvoiceStatusDistribution(data.invoices),
       paymentsByMethod:
@@ -250,8 +317,20 @@ export const ReportService = {
     return this.getReport(options).collectedByMonth;
   },
 
+  getTotalInvoiceValue(options = {}) {
+    return this.getReport(options).totalInvoiceValue;
+  },
+
+  getTotalCollectedAmount(options = {}) {
+    return this.getReport(options).totalCollectedAmount;
+  },
+
   getDebtByMonth(options = {}) {
     return this.getReport(options).debtByMonth;
+  },
+
+  getDebtByRoom(options = {}) {
+    return this.getReport(options).debtByRoom;
   },
 
   getTotalDebt(options = {}) {
@@ -268,6 +347,14 @@ export const ReportService = {
 
   getElectricityConsumptionByRoom(options = {}) {
     return this.getReport(options).electricityByRoom;
+  },
+
+  getWaterConsumptionByRoom(options = {}) {
+    return this.getReport(options).waterByRoom;
+  },
+
+  getRoomBreakdown(options = {}) {
+    return this.getReport(options).roomBreakdown;
   },
 
   getInvoiceStatusDistribution(options = {}) {
