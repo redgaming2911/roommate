@@ -34,7 +34,7 @@ export function renderTenantForm({ tenant = null, onSubmit }) {
       onSubmit(data);
       modal.remove();
     } catch (err) {
-      showToast(err.message, "error");
+      showToast({ message: err.message, type: "error" });
     }
   };
 }

@@ -1,9 +1,9 @@
-import { StorageService } from './storage-service.js';
+import * as StorageService from './storage-service.js';
 import {
   normalizeServiceConfig,
   validateServiceConfig
 } from '../business/service-config-validator.js';
-import { generateId } from '../utils/id-utils.js';
+import { generateId } from '../utils/ma.js';
 import { STORAGE_KEYS } from '../constants/storage-keys.js';
 
 const KEY = STORAGE_KEYS.SERVICE_CONFIGS;

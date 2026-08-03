@@ -1,6 +1,6 @@
 import { STORAGE_KEYS } from "../constants/storage-keys.js";
-import { StorageService } from "./storage-service.js";
-import { RoomService } from "./room-service.js";
+import * as StorageService from "./storage-service.js";
+import * as RoomService from "./room-service.js";
 
 import { validateContract } from "../business/contract-validator.js";
 import {
@@ -12,11 +12,11 @@ import {
  * Helpers
  */
 function getAll() {
-  return StorageService.get(STORAGE_KEYS.CONTRACTS) || [];
+  return StorageService.getAll(STORAGE_KEYS.CONTRACTS);
 }
 
 function saveAll(contracts) {
-  StorageService.set(STORAGE_KEYS.CONTRACTS, contracts);
+  StorageService.replaceAll(STORAGE_KEYS.CONTRACTS, contracts);
 }
 
 function findIndexById(contracts, id) {

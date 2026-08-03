@@ -1,7 +1,6 @@
-import { RoomService } from '../services/room-service.js';
+import * as RoomService from '../services/room-service.js';
 import { openRoomForm } from '../components/room-form.js';
 import { showToast } from '../components/toast.js';
-import { confirmDialog } from '../components/confirm-dialog.js';
 
 let state = {
   keyword: '',
@@ -9,7 +8,7 @@ let state = {
   sort: ''
 };
 
-export function renderRoomsPage(container) {
+function renderRoomsPage(container) {
   container.innerHTML = `
     <div class="rooms-page" data-testid="rooms-page">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -146,16 +145,15 @@ function bindTableEvents() {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
 
-      const confirmed = await confirmDialog('Bạn có chắc muốn xóa?');
-      if (!confirmed) return;
-
-      try {
-        RoomService.deleteRoom(id);
-        showToast('Xóa thành công', 'success');
-        renderTable();
-      } catch (err) {
-        showToast(err.message, 'error');
-      }
+      window.showConfirm('Bạn có chắc muốn xóa?', () => {
+        try {
+          RoomService.deleteRoom(id);
+          showToast({ message: 'Xóa thành công', type: 'success' });
+          renderTable();
+        } catch (err) {
+          showToast({ message: err.message, type: 'error' });
+        }
+      });
     });
   });
 }
@@ -176,3 +174,5 @@ function renderBadge(status) {
 function formatCurrency(v) {
   return new Intl.NumberFormat('vi-VN').format(v) + ' đ';
 }
+
+export const render = renderRoomsPage;

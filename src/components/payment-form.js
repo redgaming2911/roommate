@@ -1,14 +1,8 @@
 import * as PaymentService from '../services/payment-service.js';
 import * as InvoiceService from '../services/invoice-service.js';
-import * as RoomServiceModule from '../services/room-service.js';
-import * as TenantServiceModule from '../services/tenant-service.js';
+import * as RoomService from '../services/room-service.js';
+import { TenantService } from '../services/tenant-service.js';
 import * as ToastModule from './toast.js';
-
-const RoomService =
-  RoomServiceModule.RoomService ?? RoomServiceModule;
-
-const TenantService =
-  TenantServiceModule.TenantService ?? TenantServiceModule;
 
 /**
  * Escape HTML.
@@ -63,15 +57,6 @@ function getToday() {
  * @param {'success'|'warning'|'error'} type
  */
 function showNotification(message, type = 'success') {
-  if (typeof ToastModule.showToast !== 'function') {
-    return;
-  }
-
-  if (ToastModule.showToast.length >= 2) {
-    ToastModule.showToast(message, type);
-    return;
-  }
-
   ToastModule.showToast({
     message,
     type

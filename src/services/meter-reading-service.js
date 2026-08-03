@@ -1,4 +1,4 @@
-import { StorageService } from './storage-service.js';
+import * as StorageService from './storage-service.js';
 import {
   calculateElectricUsage,
   calculateWaterUsage
@@ -9,9 +9,9 @@ import {
   getPreviousMonthKey
 } from '../business/meter-validator.js';
 import { STORAGE_KEYS } from '../constants/storage-keys.js';
-import { generateId } from '../utils/id-utils.js';
+import { generateId } from '../utils/ma.js';
 import { ContractService } from './contract-service.js';
-import { RoomService } from './room-service.js';
+import * as RoomService from './room-service.js';
 
 const KEY = STORAGE_KEYS.METER_READINGS;
 const INVOICE_KEY = STORAGE_KEYS.INVOICES;

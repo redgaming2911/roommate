@@ -5,8 +5,8 @@ import {
   canDeletePayment
 } from '../business/payment-processor.js';
 import { validatePayment } from '../business/payment-validator.js';
-import { taoId } from '../utils/ma.js';
-import StorageService from './storage-service.js';
+import { generateId } from '../utils/ma.js';
+import * as StorageService from './storage-service.js';
 
 const PAYMENT_KEY = 'payments';
 const INVOICE_KEY = 'invoices';
@@ -17,7 +17,7 @@ const INVOICE_KEY = 'invoices';
  * @returns {Array<Object>}
  */
 function getInvoices() {
-  return StorageService.get(INVOICE_KEY) || [];
+  return StorageService.getAll(INVOICE_KEY);
 }
 
 /**
@@ -68,27 +68,27 @@ function commitPaymentAndInvoice({
   let paymentsUpdated = false;
 
   try {
-    StorageService.set(
+    StorageService.replaceAll(
       PAYMENT_KEY,
       nextPayments
     );
 
     paymentsUpdated = true;
 
-    StorageService.set(
+    StorageService.replaceAll(
       INVOICE_KEY,
       nextInvoices
     );
   } catch (error) {
     try {
       if (paymentsUpdated) {
-        StorageService.set(
+    StorageService.replaceAll(
           PAYMENT_KEY,
           previousPayments
         );
       }
 
-      StorageService.set(
+    StorageService.replaceAll(
         INVOICE_KEY,
         previousInvoices
       );
@@ -154,7 +154,7 @@ function buildSyncedInvoice(
  * @returns {Array<Object>}
  */
 export function getPayments() {
-  return StorageService.get(PAYMENT_KEY) || [];
+  return StorageService.getAll(PAYMENT_KEY);
 }
 
 /**
@@ -246,7 +246,7 @@ export function createPayment(data) {
 
   const newPayment = {
     ...validatedPayment,
-    id: data.id || taoId(),
+    id: data.id || generateId(),
     invoiceId: invoice.id,
     paymentDate:
       data.paymentDate || now,
@@ -572,7 +572,7 @@ export function syncInvoicePaymentStatus(
     updatedInvoice;
 
   try {
-    StorageService.set(
+    StorageService.replaceAll(
       INVOICE_KEY,
       nextInvoices
     );

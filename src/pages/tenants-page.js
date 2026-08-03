@@ -1,6 +1,5 @@
 import { TenantService } from "../services/tenant-service.js";
 import { showToast } from "../components/toast.js";
-import { confirmDialog } from "../components/confirm-dialog.js";
 import { renderTenantForm } from "../components/tenant-form.js";
 
 let state = {
@@ -98,26 +97,28 @@ function bindEvents() {
     }
 
     if (e.target.classList.contains("btn-archive")) {
-      await confirmDialog("Lưu trữ người thuê này?");
-      TenantService.archiveTenant(id);
-      showToast("Đã lưu trữ");
-      refresh();
+      window.showConfirm("Lưu trữ người thuê này?", () => {
+        TenantService.archiveTenant(id);
+        showToast({ message: "Đã lưu trữ" });
+        refresh();
+      });
     }
 
     if (e.target.classList.contains("btn-delete")) {
       try {
-        await confirmDialog("Xóa người thuê này?");
-        TenantService.deleteTenant(id);
-        showToast("Đã xóa");
-        refresh();
+        window.showConfirm("Xóa người thuê này?", () => {
+          TenantService.deleteTenant(id);
+          showToast({ message: "Đã xóa" });
+          refresh();
+        });
       } catch (err) {
-        showToast(err.message, "error");
+        showToast({ message: err.message, type: "error" });
       }
     }
 
     if (e.target.classList.contains("btn-view")) {
       const history = TenantService.getTenantRentalHistory(id);
-      showToast(`Lịch sử: ${history.length} hợp đồng`);
+      showToast({ message: `Lịch sử: ${history.length} hợp đồng` });
     }
   });
 }
@@ -125,20 +126,20 @@ function bindEvents() {
 function handleCreate(data) {
   try {
     TenantService.createTenant(data);
-    showToast("Tạo người thuê thành công");
+    showToast({ message: "Tạo người thuê thành công" });
     refresh();
   } catch (err) {
-    showToast(err.message, "error");
+    showToast({ message: err.message, type: "error" });
   }
 }
 
 function handleUpdate(id, data) {
   try {
     TenantService.updateTenant(id, data);
-    showToast("Cập nhật thành công");
+    showToast({ message: "Cập nhật thành công" });
     refresh();
   } catch (err) {
-    showToast(err.message, "error");
+    showToast({ message: err.message, type: "error" });
   }
 }
 
@@ -147,7 +148,7 @@ function refresh() {
   renderTable();
 }
 
-export function renderTenantsPage(container) {
+function renderTenantsPage(container) {
   container.innerHTML = `
     <div class="tenants-page">
       <div class="page-header">
@@ -188,3 +189,5 @@ export function renderTenantsPage(container) {
   renderTable();
   bindEvents();
 }
+
+export const render = renderTenantsPage;

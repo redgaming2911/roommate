@@ -1,17 +1,10 @@
 import * as PaymentService from '../services/payment-service.js';
 import * as InvoiceService from '../services/invoice-service.js';
-import * as RoomServiceModule from '../services/room-service.js';
-import * as TenantServiceModule from '../services/tenant-service.js';
+import * as RoomService from '../services/room-service.js';
+import { TenantService } from '../services/tenant-service.js';
 import * as ToastModule from '../components/toast.js';
-import * as ConfirmDialogModule from '../components/confirm-dialog.js';
 import { openPaymentForm } from '../components/payment-form.js';
 import '../styles/payments.css';
-
-const RoomService =
-  RoomServiceModule.RoomService ?? RoomServiceModule;
-
-const TenantService =
-  TenantServiceModule.TenantService ?? TenantServiceModule;
 
 const state = {
   keyword: '',
@@ -114,15 +107,6 @@ function formatDateTime(value) {
  * @param {'success'|'warning'|'error'} type
  */
 function showNotification(message, type = 'success') {
-  if (typeof ToastModule.showToast !== 'function') {
-    return;
-  }
-
-  if (ToastModule.showToast.length >= 2) {
-    ToastModule.showToast(message, type);
-    return;
-  }
-
   ToastModule.showToast({
     message,
     type
@@ -136,13 +120,9 @@ function showNotification(message, type = 'success') {
  * @returns {Promise<boolean>}
  */
 async function requestConfirmation(message) {
-  if (typeof ConfirmDialogModule.confirmDialog === 'function') {
-    return Boolean(
-      await ConfirmDialogModule.confirmDialog(message)
-    );
-  }
-
-  return window.confirm(message);
+  return new Promise((resolve) => {
+    window.showConfirm(message, () => resolve(true));
+  });
 }
 
 /**
@@ -1048,7 +1028,7 @@ function bindPageEvents() {
  *
  * @param {HTMLElement} container
  */
-export function renderPaymentsPage(container) {
+function renderPaymentsPage(container) {
   pageContainer = container;
 
   pageContainer.innerHTML = `

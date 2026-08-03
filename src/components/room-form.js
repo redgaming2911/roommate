@@ -1,4 +1,4 @@
-import { RoomService } from '../services/room-service.js';
+import * as RoomService from '../services/room-service.js';
 import { showToast } from './toast.js';
 
 export function openRoomForm(onSuccess, id = null) {
@@ -73,7 +73,7 @@ export function openRoomForm(onSuccess, id = null) {
         RoomService.createRoom(data);
       }
 
-      showToast('Lưu thành công', 'success');
+      showToast({ message: 'Lưu thành công', type: 'success' });
       modal.remove();
       onSuccess && onSuccess();
 

@@ -11,7 +11,7 @@ const state = {
   selectedContract: null,
 };
 
-export async function renderContractsPage(container) {
+async function renderContractsPage(container) {
   container.innerHTML = `
     <div class="contracts-page">
       <div class="page-header">
@@ -141,3 +141,5 @@ function openDetail(container, id) {
     },
   });
 }
+
+export const render = renderContractsPage;

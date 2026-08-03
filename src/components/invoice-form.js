@@ -1,9 +1,5 @@
 import * as InvoiceService from '../services/invoice-service.js';
-import * as RoomServiceModule from '../services/room-service.js';
-import * as ConfirmDialogModule from './confirm-dialog.js';
-
-const RoomService =
-  RoomServiceModule.RoomService ?? RoomServiceModule;
+import * as RoomService from '../services/room-service.js';
 
 /**
  * Escape nội dung HTML.
@@ -40,13 +36,9 @@ function formatCurrency(value) {
  * @returns {Promise<boolean>}
  */
 async function requestConfirmation(message) {
-  if (typeof ConfirmDialogModule.confirmDialog === 'function') {
-    return Boolean(
-      await ConfirmDialogModule.confirmDialog(message)
-    );
-  }
-
-  return window.confirm(message);
+  return new Promise((resolve) => {
+    window.showConfirm(message, () => resolve(true));
+  });
 }
 
 /**

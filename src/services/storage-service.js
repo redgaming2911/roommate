@@ -3,7 +3,7 @@
  * Không phụ thuộc UI, dễ unit test
  */
 
-import { generateId } from '../utils/id-utils.js';
+import { generateId } from '../utils/ma.js';
 import { getCurrentISODateTime } from '../utils/date-utils.js';
 
 /**

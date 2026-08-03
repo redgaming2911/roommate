@@ -2,8 +2,8 @@
 
 import * as InvoiceCalculator from '../business/invoice-calculator.js';
 import { validateInvoice } from '../business/invoice-validator.js';
-import { taoId } from '../utils/ma.js';
-import StorageService from './storage-service.js';
+import { generateId } from '../utils/ma.js';
+import * as StorageService from './storage-service.js';
 
 // giả định các storage key
 const KEY = 'invoices';
@@ -17,19 +17,19 @@ const ROOM_KEY = 'rooms';
 // ======================
 
 function getAllContracts() {
-  return StorageService.get(CONTRACT_KEY) || [];
+  return StorageService.getAll(CONTRACT_KEY);
 }
 
 function getAllMeters() {
-  return StorageService.get(METER_KEY) || [];
+  return StorageService.getAll(METER_KEY);
 }
 
 function getAllServices() {
-  return StorageService.get(SERVICE_KEY) || [];
+  return StorageService.getAll(SERVICE_KEY);
 }
 
 function getAllRooms() {
-  return StorageService.get(ROOM_KEY) || [];
+  return StorageService.getAll(ROOM_KEY);
 }
 
 function getRoomById(roomId) {
@@ -213,7 +213,7 @@ function buildInvoiceItems({ contract, meter, services }) {
 // ======================
 
 export function getInvoices() {
-  return StorageService.get(KEY) || [];
+  return StorageService.getAll(KEY);
 }
 
 export function getInvoiceById(id) {
@@ -244,7 +244,7 @@ export function createInvoice(data) {
   }
 
   const invoice = {
-    id: taoId(),
+    id: generateId(),
     invoiceCode:
       data.invoiceCode ??
       createInvoiceCode(data.month, room),
@@ -257,7 +257,7 @@ export function createInvoice(data) {
   validateInvoice(invoice);
 
   invoices.push(invoice);
-  StorageService.set(KEY, invoices);
+  StorageService.replaceAll(KEY, invoices);
 
   return invoice;
 }
@@ -314,7 +314,7 @@ export function generateInvoiceForRoom(
   );
 
   const invoice = {
-    id: taoId(),
+    id: generateId(),
     invoiceCode: createInvoiceCode(
       month,
       room
@@ -335,7 +335,7 @@ export function generateInvoiceForRoom(
   const invoices = getInvoices();
 
   invoices.push(invoice);
-  StorageService.set(KEY, invoices);
+  StorageService.replaceAll(KEY, invoices);
 
   return invoice;
 }
@@ -406,7 +406,7 @@ export function updateDraftInvoice(id, data) {
   validateInvoice(updated);
 
   invoices[index] = updated;
-  StorageService.set(KEY, invoices);
+  StorageService.replaceAll(KEY, invoices);
 
   return updated;
 }
@@ -449,7 +449,7 @@ export function addManualItem(invoiceId, item) {
     Number(quantity) * Number(unitPrice);
 
   const manualItem = {
-    id: taoId(),
+    id: generateId(),
     type: 'manual',
     name,
     quantity,
@@ -476,7 +476,7 @@ export function addManualItem(invoiceId, item) {
   validateInvoice(updatedInvoice);
 
   invoices[index] = updatedInvoice;
-  StorageService.set(KEY, invoices);
+  StorageService.replaceAll(KEY, invoices);
 
   return manualItem;
 }
@@ -528,7 +528,7 @@ export function removeManualItem(invoiceId, itemId) {
   validateInvoice(updatedInvoice);
 
   invoices[index] = updatedInvoice;
-  StorageService.set(KEY, invoices);
+  StorageService.replaceAll(KEY, invoices);
 
   return updatedInvoice;
 }
@@ -578,7 +578,7 @@ export function finalizeInvoice(id) {
   validateInvoice(finalizedInvoice);
 
   invoices[index] = finalizedInvoice;
-  StorageService.set(KEY, invoices);
+  StorageService.replaceAll(KEY, invoices);
 
   return finalizedInvoice;
 }
@@ -613,7 +613,7 @@ export function cancelInvoice(id) {
   };
 
   invoices[index] = canceledInvoice;
-  StorageService.set(KEY, invoices);
+  StorageService.replaceAll(KEY, invoices);
 
   return canceledInvoice;
 }
@@ -642,7 +642,7 @@ export function deleteDraftInvoice(id) {
     (item) => item.id !== id
   );
 
-  StorageService.set(KEY, filteredInvoices);
+  StorageService.replaceAll(KEY, filteredInvoices);
 
   return true;
 }
@@ -742,7 +742,7 @@ export function recalculateInvoice(id) {
   validateInvoice(updatedInvoice);
 
   invoices[index] = updatedInvoice;
-  StorageService.set(KEY, invoices);
+  StorageService.replaceAll(KEY, invoices);
 
   return updatedInvoice;
 }

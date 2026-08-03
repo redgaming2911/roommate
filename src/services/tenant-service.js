@@ -1,11 +1,11 @@
 // tenant-service.js
 
-import { validateTenant } from "../business/tenant-validator.js";
+import * as StorageService from "./storage-service.js";
 import { STORAGE_KEYS } from "../constants/storage-keys.js";
-import { StorageService } from "./storage-service.js";
+import { validateTenant } from "../business/tenant-validator.js";
 
 function getTenants(includeArchived = false) {
-  const tenants = StorageService.get(STORAGE_KEYS.TENANTS) || [];
+  const tenants = StorageService.getAll(STORAGE_KEYS.TENANTS);
   return includeArchived ? tenants : tenants.filter((t) => !t.isArchived);
 }
 
@@ -28,7 +28,7 @@ function createTenant(data) {
   };
 
   tenants.push(newTenant);
-  StorageService.set(STORAGE_KEYS.TENANTS, tenants);
+  StorageService.replaceAll(STORAGE_KEYS.TENANTS, tenants);
 
   return newTenant;
 }
@@ -47,7 +47,7 @@ function updateTenant(id, data) {
     updatedAt: new Date().toISOString(),
   };
 
-  StorageService.set(STORAGE_KEYS.TENANTS, tenants);
+  StorageService.replaceAll(STORAGE_KEYS.TENANTS, tenants);
 
   return tenants[index];
 }
@@ -61,14 +61,14 @@ function archiveTenant(id) {
   tenant.isArchived = true;
   tenant.updatedAt = new Date().toISOString();
 
-  StorageService.set(STORAGE_KEYS.TENANTS, tenants);
+  StorageService.replaceAll(STORAGE_KEYS.TENANTS, tenants);
 
   return tenant;
 }
 
 function deleteTenant(id) {
   const tenants = getTenants(true);
-  const contracts = StorageService.get(STORAGE_KEYS.CONTRACTS) || [];
+  const contracts = StorageService.getAll(STORAGE_KEYS.CONTRACTS);
 
   const hasActiveContract = contracts.some(
     (c) => c.tenantId === id && c.status === "active"
@@ -80,7 +80,7 @@ function deleteTenant(id) {
 
   const newTenants = tenants.filter((t) => t.id !== id);
 
-  StorageService.set(STORAGE_KEYS.TENANTS, newTenants);
+  StorageService.replaceAll(STORAGE_KEYS.TENANTS, newTenants);
 }
 
 function searchTenants(keyword) {
@@ -99,13 +99,13 @@ function searchTenants(keyword) {
 }
 
 function getTenantRentalHistory(tenantId) {
-  const contracts = StorageService.get(STORAGE_KEYS.CONTRACTS) || [];
+  const contracts = StorageService.getAll(STORAGE_KEYS.CONTRACTS);
   return contracts.filter((c) => c.tenantId === tenantId);
 }
 
 function getCurrentRoomOfTenant(tenantId) {
-  const contracts = StorageService.get(STORAGE_KEYS.CONTRACTS) || [];
-  const rooms = StorageService.get(STORAGE_KEYS.ROOMS) || [];
+  const contracts = StorageService.getAll(STORAGE_KEYS.CONTRACTS);
+  const rooms = StorageService.getAll(STORAGE_KEYS.ROOMS);
 
   const activeContract = contracts.find(
     (c) => c.tenantId === tenantId && c.status === "active"

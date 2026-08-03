@@ -1,7 +1,7 @@
 import { ServiceConfigService } from '../services/service-config-service.js';
 import { ServiceConfigForm } from '../components/service-config-form.js';
 
-export function renderServicesPage(container) {
+function renderServicesPage(container) {
   const state = {
     keyword: '',
     status: 'all'
@@ -126,3 +126,5 @@ export function renderServicesPage(container) {
 
   loadData();
 }
+
+export const render = renderServicesPage;

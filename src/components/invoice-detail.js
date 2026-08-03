@@ -1,8 +1,6 @@
 import * as InvoiceService from '../services/invoice-service.js';
-import * as RoomServiceModule from '../services/room-service.js';
-
-const RoomService =
-  RoomServiceModule.RoomService ?? RoomServiceModule;
+import * as PaymentService from '../services/payment-service.js';
+import * as RoomService from '../services/room-service.js';
 
 /**
  * Escape nội dung HTML.
@@ -136,36 +134,7 @@ function getRoom(roomId) {
  * @returns {Array}
  */
 function getPaymentHistory(invoice) {
-  if (
-    typeof InvoiceService.getPaymentHistory ===
-    'function'
-  ) {
-    return (
-      InvoiceService.getPaymentHistory(invoice.id) ??
-      []
-    );
-  }
-
-  if (
-    typeof InvoiceService.getPaymentsByInvoiceId ===
-    'function'
-  ) {
-    return (
-      InvoiceService.getPaymentsByInvoiceId(
-        invoice.id
-      ) ?? []
-    );
-  }
-
-  if (Array.isArray(invoice.paymentHistory)) {
-    return invoice.paymentHistory;
-  }
-
-  if (Array.isArray(invoice.payments)) {
-    return invoice.payments;
-  }
-
-  return [];
+  return PaymentService.getPaymentsByInvoice(invoice.id);
 }
 
 /**

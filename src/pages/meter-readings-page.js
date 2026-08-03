@@ -1,9 +1,9 @@
 import { MeterReadingService } from '../services/meter-reading-service.js';
-import { RoomService } from '../services/room-service.js';
+import * as RoomService from '../services/room-service.js';
 import { createMeterRow } from '../components/meter-reading-form.js';
 import '../styles/meter-readings.css';
 
-export function renderMeterReadingsPage(container) {
+function renderMeterReadingsPage(container) {
   let selectedMonth = getCurrentMonth();
 
   function getCurrentMonth() {
@@ -128,3 +128,5 @@ export function renderMeterReadingsPage(container) {
 
   render();
 }
+
+export const render = renderMeterReadingsPage;

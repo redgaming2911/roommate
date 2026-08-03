@@ -1,13 +1,9 @@
 import * as InvoiceService from '../services/invoice-service.js';
-import * as RoomServiceModule from '../services/room-service.js';
+import * as RoomService from '../services/room-service.js';
 import * as ToastModule from '../components/toast.js';
-import * as ConfirmDialogModule from '../components/confirm-dialog.js';
 import { openInvoiceForm } from '../components/invoice-form.js';
 import { openInvoiceDetail } from '../components/invoice-detail.js';
 import '../styles/invoices.css';
-
-const RoomService =
-  RoomServiceModule.RoomService ?? RoomServiceModule;
 
 const state = {
   month: getCurrentMonth(),
@@ -99,15 +95,6 @@ function formatDate(value) {
  * @param {'success'|'warning'|'error'} type
  */
 function showNotification(message, type = 'success') {
-  if (typeof ToastModule.showToast !== 'function') {
-    return;
-  }
-
-  if (ToastModule.showToast.length >= 2) {
-    ToastModule.showToast(message, type);
-    return;
-  }
-
   ToastModule.showToast({
     message,
     type
@@ -120,13 +107,9 @@ function showNotification(message, type = 'success') {
  * @returns {Promise<boolean>}
  */
 async function requestConfirmation(message) {
-  if (typeof ConfirmDialogModule.confirmDialog === 'function') {
-    return Boolean(
-      await ConfirmDialogModule.confirmDialog(message)
-    );
-  }
-
-  return window.confirm(message);
+  return new Promise((resolve) => {
+    window.showConfirm(message, () => resolve(true));
+  });
 }
 
 /**
@@ -1003,7 +986,7 @@ function bindPageEvents() {
  * Render trang quản lý hóa đơn.
  * @param {HTMLElement} container
  */
-export function renderInvoicesPage(container) {
+function renderInvoicesPage(container) {
   pageContainer = container;
 
   pageContainer.innerHTML = `
